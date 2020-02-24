@@ -58,7 +58,7 @@ struct ClientScopeListEntry
 
   RdmnetClient* client;
   ClientScopeListEntry* next;
-};
+} wgbvs;
 
 typedef struct RptClientData
 {

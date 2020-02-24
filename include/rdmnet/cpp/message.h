@@ -42,7 +42,27 @@ public:
 
   static RdmnetLocalRdmCommand& get() noexcept;
   const RdmnetLocalRdmCommand& get() const noexcept;
-  rdm::Command rdm_command() const noexcept;
+
+  constexpr rdm::Uid rdmnet_dest_uid() const noexcept;
+  constexpr uint16_t dest_endpoint() const noexcept;
+  constexpr rdm::Uid rdm_dest_uid() const noexcept;
+  constexpr uint16_t subdevice() const noexcept;
+  constexpr rdm_command_class_t command_class() const noexcept;
+  constexpr uint16_t param_id() const noexcept;
+  constexpr uint8_t datalen() const noexcept;
+  constexpr const uint8_t* data() const noexcept;
+
+  constexpr rdm::Command ToRdm() const noexcept;
+
+  LocalRdmCommand& SetRdmnetDestUid(const rdm::Uid& uid) noexcept;
+  LocalRdmCommand& SetRdmnetDestUid(const RdmUid& uid) noexcept;
+  LocalRdmCommand& SetDestEndpoint(uint16_t dest_endpoint) noexcept;
+  LocalRdmCommand& SetRdmDestUid(const rdm::Uid& uid) noexcept;
+  LocalRdmCommand& SetRdmDestUid(const RdmUid& uid) noexcept;
+  LocalRdmCommand& SetSubdevice(uint16_t subdevice) noexcept;
+  LocalRdmCommand& SetCommandClass(rdm_command_class_t command_class) noexcept;
+  LocalRdmCommand& SetParamId(uint16_t param_id) noexcept;
+  LocalRdmCommand& SetData(const uint8_t* data, size_t datalen) noexcept;
 
   static LocalRdmCommand Get(uint16_t param_id, const rdm::Uid& rdmnet_dest_uid, uint16_t dest_endpoint,
                              const rdm::Uid& rdm_dest_uid, const uint8_t* data = nullptr, uint8_t datalen = 0);
