@@ -18,12 +18,12 @@
  *****************************************************************************/
 
 /*!
- * \file rdmnet/core/llrp_manager.h
+ * \file rdmnet/llrp_manager.h
  * \brief Functions for implementing LLRP Manager functionality
  */
 
-#ifndef RDMNET_CORE_LLRP_MANAGER_H_
-#define RDMNET_CORE_LLRP_MANAGER_H_
+#ifndef RDMNET_LLRP_MANAGER_H_
+#define RDMNET_LLRP_MANAGER_H_
 
 #include "etcpal/uuid.h"
 #include "etcpal/inet.h"
@@ -33,8 +33,7 @@
 #include "rdmnet/core/message.h"
 
 /*!
- * \defgroup llrp_manager LLRP Manager
- * \ingroup llrp
+ * \defgroup llrp_manager LLRP Manager API
  * \brief Implement the functionality required by an LLRP Manager in E1.33.
  *
  * @{
@@ -60,14 +59,13 @@ typedef struct LlrpManagerConfig
   void* callback_context;
 } LlrpManagerConfig;
 
-etcpal_error_t rdmnet_llrp_manager_create(const LlrpManagerConfig* config, llrp_manager_t* handle);
-void rdmnet_llrp_manager_destroy(llrp_manager_t handle);
+etcpal_error_t llrp_manager_create(const LlrpManagerConfig* config, llrp_manager_t* handle);
+void llrp_manager_destroy(llrp_manager_t handle);
 
-etcpal_error_t rdmnet_llrp_start_discovery(llrp_manager_t handle, uint16_t filter);
-etcpal_error_t rdmnet_llrp_stop_discovery(llrp_manager_t handle);
+etcpal_error_t llrp_manager_start_discovery(llrp_manager_t handle, uint16_t filter);
+etcpal_error_t llrp_manager_stop_discovery(llrp_manager_t handle);
 
-etcpal_error_t rdmnet_llrp_send_rdm_command(llrp_manager_t handle, const LlrpLocalRdmCommand* cmd,
-                                            uint32_t* transaction_num);
+etcpal_error_t llrp_manager_send_rdm_command(llrp_manager_t handle, const LlrpLocalRdmCommand* cmd, uint32_t* seq_num);
 
 #ifdef __cplusplus
 }
@@ -77,4 +75,4 @@ etcpal_error_t rdmnet_llrp_send_rdm_command(llrp_manager_t handle, const LlrpLoc
  * @}
  */
 
-#endif /* RDMNET_CORE_LLRP_MANAGER_H_ */
+#endif /* RDMNET_LLRP_MANAGER_H_ */

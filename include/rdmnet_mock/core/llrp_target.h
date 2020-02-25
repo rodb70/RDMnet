@@ -30,10 +30,13 @@
 extern "C" {
 #endif
 
-DECLARE_FAKE_VALUE_FUNC(etcpal_error_t, rdmnet_llrp_target_create, const LlrpTargetConfig*, llrp_target_t*);
-DECLARE_FAKE_VOID_FUNC(rdmnet_llrp_target_destroy, llrp_target_t);
-DECLARE_FAKE_VOID_FUNC(rdmnet_llrp_target_update_connection_state, llrp_target_t, bool);
-DECLARE_FAKE_VALUE_FUNC(etcpal_error_t, rdmnet_llrp_send_rdm_response, llrp_target_t, const LlrpLocalRdmResponse*);
+DECLARE_FAKE_VALUE_FUNC(etcpal_error_t, llrp_target_create, const LlrpTargetConfig*, llrp_target_t*);
+DECLARE_FAKE_VOID_FUNC(llrp_target_destroy, llrp_target_t);
+DECLARE_FAKE_VOID_FUNC(llrp_target_update_connection_state, llrp_target_t, bool);
+DECLARE_FAKE_VALUE_FUNC(etcpal_error_t, llrp_target_send_ack, llrp_target_t, const LlrpRemoteRdmCommand*,
+                        const uint8_t*, uint8_t);
+DECLARE_FAKE_VALUE_FUNC(etcpal_error_t, llrp_target_send_nack, llrp_target_t, const LlrpRemoteRdmCommand*,
+                        rdm_nack_reason_t);
 
 void llrp_target_reset_all_fakes(void);
 

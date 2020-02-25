@@ -33,6 +33,7 @@
 #include "rdm/cpp/message.h"
 #include "rdmnet/controller.h"
 #include "rdmnet/cpp/client.h"
+#include "rdmnet/cpp/core.h"
 #include "rdmnet/controller.h"
 #include "rdmnet/core/util.h"
 
@@ -257,12 +258,6 @@ public:
   etcpal::Expected<Scope> scope(ScopeHandle scope_handle) const;
 
   void UpdateRdmData(const ControllerRdmData& new_data);
-
-  static etcpal::Error Init(const EtcPalLogParams* log_params = nullptr,
-                            const std::vector<RdmnetMcastNetintId>& mcast_netints = std::vector<RdmnetMcastNetintId>{});
-  static etcpal::Error Init(const etcpal::Logger& logger,
-                            const std::vector<RdmnetMcastNetintId>& mcast_netints = std::vector<RdmnetMcastNetintId>{});
-  static void Deinit();
 
 private:
   ControllerHandle handle_{RDMNET_CONTROLLER_INVALID};

@@ -17,7 +17,7 @@
  * https://github.com/ETCLabs/RDMnet
  *****************************************************************************/
 
-#include "rdmnet/core/llrp_manager.h"
+#include "rdmnet/llrp_manager.h"
 
 #include "rdm/uid.h"
 #include "rdm/controller.h"
@@ -32,11 +32,11 @@
 /***************************** Private macros ********************************/
 
 #if RDMNET_DYNAMIC_MEM
-#define llrp_manager_alloc() malloc(sizeof(LlrpManager))
-#define llrp_manager_dealloc(ptr) free(ptr)
+#define LLRP_MANAGER_ALLOC() malloc(sizeof(LlrpManager))
+#define LLRP_MANAGER_DEALLOC(ptr) free(ptr)
 #else
-#define llrp_manager_alloc() NULL
-#define llrp_manager_dealloc(ptr)
+#define LLRP_MANAGER_ALLOC() NULL
+#define LLRP_MANAGER_DEALLOC(ptr)
 #endif
 
 #define INIT_CALLBACK_INFO(cbptr) ((cbptr)->which = kManagerCallbackNone)
@@ -82,7 +82,7 @@ static bool send_next_probe(LlrpManager* manager);
 
 /*************************** Function definitions ****************************/
 
-etcpal_error_t rdmnet_llrp_manager_init()
+etcpal_error_t llrp_manager_init(void)
 {
   etcpal_rbtree_init(&state.managers, manager_compare_by_handle, manager_node_alloc, manager_node_dealloc);
   etcpal_rbtree_init(&state.managers_by_cid_and_netint, manager_compare_by_cid_and_netint, manager_node_alloc,
@@ -104,7 +104,7 @@ static void manager_dealloc(const EtcPalRbTree* self, EtcPalRbNode* node)
 }
 #endif
 
-void rdmnet_llrp_manager_deinit()
+void llrp_manager_deinit(void)
 {
 #if RDMNET_DYNAMIC_MEM
   etcpal_rbtree_clear_with_cb(&state.managers, manager_dealloc);
@@ -112,21 +112,22 @@ void rdmnet_llrp_manager_deinit()
   memset(&state, 0, sizeof state);
 }
 
-/*! \brief Create a new LLRP manager instance.
+/*!
+ * \brief Create a new LLRP manager instance.
  *
- *  LLRP managers can only be created when #RDMNET_DYNAMIC_MEM is defined nonzero. Otherwise, this
- *  function will always fail.
+ * LLRP managers can only be created when #RDMNET_DYNAMIC_MEM is defined nonzero. Otherwise, this
+ * function will always fail.
  *
- *  \param[in] config Configuration parameters for the LLRP manager to be created.
- *  \param[out] handle Handle to the newly-created manager instance.
- *  \return #kEtcPalErrOk: Manager created successfully.
- *  \return #kEtcPalErrInvalid: Invalid argument provided.
- *  \return #kEtcPalErrNotInit: Module not initialized.
- *  \return #kEtcPalErrNoMem: No memory to allocate additional manager instance.
- *  \return #kEtcPalErrSys: An internal library or system call error occurred.
- *  \return Note: Other error codes might be propagated from underlying socket calls.
+ * \param[in] config Configuration parameters for the LLRP manager to be created.
+ * \param[out] handle Handle to the newly-created manager instance.
+ * \return #kEtcPalErrOk: Manager created successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument provided.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNoMem: No memory to allocate additional manager instance.
+ * \return #kEtcPalErrSys: An internal library or system call error occurred.
+ * \return Note: Other error codes might be propagated from underlying socket calls.
  */
-etcpal_error_t rdmnet_llrp_manager_create(const LlrpManagerConfig* config, llrp_manager_t* handle)
+etcpal_error_t llrp_manager_create(const LlrpManagerConfig* config, llrp_manager_t* handle)
 {
   if (!config || !handle)
     return kEtcPalErrInvalid;
@@ -154,13 +155,14 @@ etcpal_error_t rdmnet_llrp_manager_create(const LlrpManagerConfig* config, llrp_
   return res;
 }
 
-/*! \brief Destroy an LLRP manager instance.
+/*!
+ * \brief Destroy an LLRP manager instance.
  *
- *  The handle will be invalidated for any future calls to API functions.
+ * The handle will be invalidated for any future calls to API functions.
  *
- *  \param[in] handle Handle to manager to destroy.
+ * \param[in] handle Handle to manager to destroy.
  */
-void rdmnet_llrp_manager_destroy(llrp_manager_t handle)
+void llrp_manager_destroy(llrp_manager_t handle)
 {
   LlrpManager* manager;
   etcpal_error_t res = get_manager(handle, &manager);
@@ -171,22 +173,23 @@ void rdmnet_llrp_manager_destroy(llrp_manager_t handle)
   release_manager(manager);
 }
 
-/*! \brief Start discovery on an LLRP manager.
+/*!
+ * \brief Start discovery on an LLRP manager.
  *
- *  Configure a manager to start discovery and send the first discovery message. Fails if a previous
- *  discovery process is still ongoing.
+ * Configure a manager to start discovery and send the first discovery message. Fails if a previous
+ * discovery process is still ongoing.
  *
- *  \param[in] handle Handle to LLRP manager on which to start discovery.
- *  \param[in] filter Discovery filter, made up of one or more of the LLRP_FILTERVAL_* constants
- *                    defined in rdmnet/defs.h
- *  \return #kEtcPalErrOk: Discovery started successfully.
- *  \return #kEtcPalErrInvalid: Invalid argument provided.
- *  \return #kEtcPalErrNotInit: Module not initialized.
- *  \return #kEtcPalErrNotFound: Handle is not associated with a valid LLRP manager instance.
- *  \return #kEtcPalErrAlready: A discovery operation is already in progress.
- *  \return #kEtcPalErrSys: An internal library or system call error occurred.
+ * \param[in] handle Handle to LLRP manager on which to start discovery.
+ * \param[in] filter Discovery filter, made up of one or more of the LLRP_FILTERVAL_* constants
+ *                   defined in rdmnet/defs.h
+ * \return #kEtcPalErrOk: Discovery started successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument provided.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNotFound: Handle is not associated with a valid LLRP manager instance.
+ * \return #kEtcPalErrAlready: A discovery operation is already in progress.
+ * \return #kEtcPalErrSys: An internal library or system call error occurred.
  */
-etcpal_error_t rdmnet_llrp_start_discovery(llrp_manager_t handle, uint16_t filter)
+etcpal_error_t llrp_manager_start_discovery(llrp_manager_t handle, uint16_t filter)
 {
   LlrpManager* manager;
   etcpal_error_t res = get_manager(handle, &manager);
@@ -218,17 +221,18 @@ etcpal_error_t rdmnet_llrp_start_discovery(llrp_manager_t handle, uint16_t filte
   return res;
 }
 
-/*! \brief Stop discovery on an LLRP manager.
+/*!
+ * \brief Stop discovery on an LLRP manager.
  *
- *  Clears all discovery state and known discovered targets.
+ * Clears all discovery state and known discovered targets.
  *
- *  \param[in] handle Handle to LLRP manager on which to stop discovery.
- *  \return #kEtcPalErrOk: Discovery stopped successfully.
- *  \return #kEtcPalErrInvalid: Invalid argument provided.
- *  \return #kEtcPalErrNotInit: Module not initialized.
- *  \return #kEtcPalErrNotFound: Handle is not associated with a valid LLRP manager instance.
+ * \param[in] handle Handle to LLRP manager on which to stop discovery.
+ * \return #kEtcPalErrOk: Discovery stopped successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument provided.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNotFound: Handle is not associated with a valid LLRP manager instance.
  */
-etcpal_error_t rdmnet_llrp_stop_discovery(llrp_manager_t handle)
+etcpal_error_t llrp_manager_stop_discovery(llrp_manager_t handle)
 {
   LlrpManager* manager;
   etcpal_error_t res = get_manager(handle, &manager);
@@ -244,54 +248,59 @@ etcpal_error_t rdmnet_llrp_stop_discovery(llrp_manager_t handle)
   return res;
 }
 
-/*! \brief Send an RDM command from an LLRP manager.
+/*!
+ * \brief Send an RDM command from an LLRP manager.
  *
- *  On success, provides the transaction number to correlate with a response.
+ * On success, provides the transaction number to correlate with a response.
  *
- *  \param[in] handle Handle to LLRP manager from which to send an RDM command.
- *  \param[in] command Command to send.
- *  \param[out] transaction_num Filled in on success with the transaction number of the command.
- *  \return #kEtcPalErrOk: Command sent successfully.
- *  \return #kEtcPalErrInvalid: Invalid argument provided.
- *  \return #kEtcPalErrNotInit: Module not initialized.
- *  \return #kEtcPalErrNotFound: Handle is not associated with a valid LLRP manager instance.
- *  \return Note: Other error codes might be propagated from underlying socket calls.
+ * \param[in] handle Handle to LLRP manager from which to send an RDM command.
+ * \param[in] command Command to send.
+ * \param[out] transaction_num Filled in on success with the transaction number of the command.
+ * \return #kEtcPalErrOk: Command sent successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument provided.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNotFound: Handle is not associated with a valid LLRP manager instance.
+ * \return Note: Other error codes might be propagated from underlying socket calls.
  */
-etcpal_error_t rdmnet_llrp_send_rdm_command(llrp_manager_t handle, const LlrpLocalRdmCommand* command,
-                                            uint32_t* transaction_num)
+etcpal_error_t llrp_manager_send_rdm_command(llrp_manager_t handle, const LlrpLocalRdmCommand* command,
+                                             uint32_t* transaction_num)
 {
-  if (!command)
-    return kEtcPalErrInvalid;
-
-  LlrpManager* manager;
-  etcpal_error_t res = get_manager(handle, &manager);
-  if (res == kEtcPalErrOk)
-  {
-    RdmCommand rdm_to_send = command->rdm;
-    rdm_to_send.source_uid = manager->uid;
-    rdm_to_send.port_id = 1;
-    rdm_to_send.transaction_num = (uint8_t)(manager->transaction_number & 0xffu);
-
-    RdmBuffer cmd_buf;
-    res = rdmctl_pack_command(&rdm_to_send, &cmd_buf);
-    if (res == kEtcPalErrOk)
-    {
-      LlrpHeader header;
-      header.dest_cid = command->dest_cid;
-      header.sender_cid = manager->keys.cid;
-      header.transaction_number = manager->transaction_number;
-
-      res = send_llrp_rdm_command(manager->send_sock, manager->send_buf,
-                                  (manager->keys.netint.ip_type == kEtcPalIpTypeV6), &header, &cmd_buf);
-      if (res == kEtcPalErrOk && transaction_num)
-        *transaction_num = manager->transaction_number++;
-    }
-    release_manager(manager);
-  }
-  return res;
+  ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(command);
+  ETCPAL_UNUSED_ARG(transaction_num);
+  return kEtcPalErrNotImpl;
+  //  if (!command)
+  //    return kEtcPalErrInvalid;
+  //
+  //  LlrpManager* manager;
+  //  etcpal_error_t res = get_manager(handle, &manager);
+  //  if (res == kEtcPalErrOk)
+  //  {
+  //    RdmCommand rdm_to_send = command->rdm;
+  //    rdm_to_send.source_uid = manager->uid;
+  //    rdm_to_send.port_id = 1;
+  //    rdm_to_send.transaction_num = (uint8_t)(manager->transaction_number & 0xffu);
+  //
+  //    RdmBuffer cmd_buf;
+  //    res = rdmctl_pack_command(&rdm_to_send, &cmd_buf);
+  //    if (res == kEtcPalErrOk)
+  //    {
+  //      LlrpHeader header;
+  //      header.dest_cid = command->dest_cid;
+  //      header.sender_cid = manager->keys.cid;
+  //      header.transaction_number = manager->transaction_number;
+  //
+  //      res = send_llrp_rdm_command(manager->send_sock, manager->send_buf,
+  //                                  (manager->keys.netint.ip_type == kEtcPalIpTypeV6), &header, &cmd_buf);
+  //      if (res == kEtcPalErrOk && transaction_num)
+  //        *transaction_num = manager->transaction_number++;
+  //    }
+  //    release_manager(manager);
+  //  }
+  //  return res;
 }
 
-void rdmnet_llrp_manager_tick()
+void llrp_manager_tick(void)
 {
   if (!rdmnet_core_initialized())
     return;
@@ -532,76 +541,79 @@ void manager_data_received(const uint8_t* data, size_t data_size, const RdmnetMc
 
 void handle_llrp_message(LlrpManager* manager, const LlrpMessage* msg, ManagerCallbackDispatchInfo* cb)
 {
-  switch (msg->vector)
-  {
-    case VECTOR_LLRP_PROBE_REPLY:
-    {
-      const DiscoveredLlrpTarget* target = LLRP_MSG_GET_PROBE_REPLY(msg);
-
-      if (manager->discovery_active && ETCPAL_UUID_CMP(&msg->header.dest_cid, &manager->keys.cid) == 0)
-      {
-        DiscoveredTargetInternal* new_target = (DiscoveredTargetInternal*)malloc(sizeof(DiscoveredTargetInternal));
-        if (new_target)
-        {
-          new_target->uid = target->uid;
-          new_target->cid = msg->header.sender_cid;
-          new_target->next = NULL;
-
-          DiscoveredTargetInternal* found =
-              (DiscoveredTargetInternal*)etcpal_rbtree_find(&manager->discovered_targets, new_target);
-          if (found)
-          {
-            // A target has responded that has the same UID as one already in our tree. This is not
-            // necessarily an error in LLRP if it has a different CID.
-            while (true)
-            {
-              if (ETCPAL_UUID_CMP(&found->cid, &new_target->cid) == 0)
-              {
-                // This target has already responded. It is not new.
-                free(new_target);
-                new_target = NULL;
-                break;
-              }
-              if (!found->next)
-                break;
-              found = found->next;
-            }
-            if (new_target)
-            {
-              // Insert at the end of the list.
-              found->next = new_target;
-            }
-          }
-          else
-          {
-            // Newly discovered Target with a new UID.
-            etcpal_rbtree_insert(&manager->discovered_targets, new_target);
-          }
-
-          if (new_target)
-          {
-            fill_callback_info(manager, cb);
-            cb->which = kManagerCallbackTargetDiscovered;
-            cb->args.target_discovered.target = &msg->data.probe_reply;
-          }
-        }
-      }
-      break;
-    }
-    case VECTOR_LLRP_RDM_CMD:
-    {
-      LlrpRemoteRdmResponse* remote_resp = &cb->args.resp_received.resp;
-      if (kEtcPalErrOk == rdmctl_unpack_response(LLRP_MSG_GET_RDM(msg), &remote_resp->rdm))
-      {
-        remote_resp->seq_num = msg->header.transaction_number;
-        remote_resp->src_cid = msg->header.sender_cid;
-
-        fill_callback_info(manager, cb);
-        cb->which = kManagerCallbackRdmRespReceived;
-      }
-      break;
-    }
-  }
+  ETCPAL_UNUSED_ARG(manager);
+  ETCPAL_UNUSED_ARG(msg);
+  ETCPAL_UNUSED_ARG(cb);
+  //  switch (msg->vector)
+  //  {
+  //    case VECTOR_LLRP_PROBE_REPLY:
+  //    {
+  //      const DiscoveredLlrpTarget* target = LLRP_MSG_GET_PROBE_REPLY(msg);
+  //
+  //      if (manager->discovery_active && ETCPAL_UUID_CMP(&msg->header.dest_cid, &manager->keys.cid) == 0)
+  //      {
+  //        DiscoveredTargetInternal* new_target = (DiscoveredTargetInternal*)malloc(sizeof(DiscoveredTargetInternal));
+  //        if (new_target)
+  //        {
+  //          new_target->uid = target->uid;
+  //          new_target->cid = msg->header.sender_cid;
+  //          new_target->next = NULL;
+  //
+  //          DiscoveredTargetInternal* found =
+  //              (DiscoveredTargetInternal*)etcpal_rbtree_find(&manager->discovered_targets, new_target);
+  //          if (found)
+  //          {
+  //            // A target has responded that has the same UID as one already in our tree. This is not
+  //            // necessarily an error in LLRP if it has a different CID.
+  //            while (true)
+  //            {
+  //              if (ETCPAL_UUID_CMP(&found->cid, &new_target->cid) == 0)
+  //              {
+  //                // This target has already responded. It is not new.
+  //                free(new_target);
+  //                new_target = NULL;
+  //                break;
+  //              }
+  //              if (!found->next)
+  //                break;
+  //              found = found->next;
+  //            }
+  //            if (new_target)
+  //            {
+  //              // Insert at the end of the list.
+  //              found->next = new_target;
+  //            }
+  //          }
+  //          else
+  //          {
+  //            // Newly discovered Target with a new UID.
+  //            etcpal_rbtree_insert(&manager->discovered_targets, new_target);
+  //          }
+  //
+  //          if (new_target)
+  //          {
+  //            fill_callback_info(manager, cb);
+  //            cb->which = kManagerCallbackTargetDiscovered;
+  //            cb->args.target_discovered.target = &msg->data.probe_reply;
+  //          }
+  //        }
+  //      }
+  //      break;
+  //    }
+  //    case VECTOR_LLRP_RDM_CMD:
+  //    {
+  //      LlrpRemoteRdmResponse* remote_resp = &cb->args.resp_received.resp;
+  //      if (kEtcPalErrOk == rdmctl_unpack_response(LLRP_MSG_GET_RDM(msg), &remote_resp->rdm))
+  //      {
+  //        remote_resp->seq_num = msg->header.transaction_number;
+  //        remote_resp->src_cid = msg->header.sender_cid;
+  //
+  //        fill_callback_info(manager, cb);
+  //        cb->which = kManagerCallbackRdmRespReceived;
+  //      }
+  //      break;
+  //    }
+  //  }
 }
 
 void fill_callback_info(const LlrpManager* manager, ManagerCallbackDispatchInfo* info)
@@ -663,7 +675,7 @@ etcpal_error_t create_new_manager(const LlrpManagerConfig* config, LlrpManager**
   if (new_handle == LLRP_MANAGER_INVALID)
     return res;
 
-  LlrpManager* manager = (LlrpManager*)llrp_manager_alloc();
+  LlrpManager* manager = (LlrpManager*)LLRP_MANAGER_ALLOC();
   if (manager)
   {
     manager->keys.netint = config->netint;
@@ -697,19 +709,19 @@ etcpal_error_t create_new_manager(const LlrpManagerConfig* config, LlrpManager**
         {
           etcpal_rbtree_remove(&state.managers, manager);
           destroy_manager_socket(manager);
-          llrp_manager_dealloc(manager);
+          LLRP_MANAGER_DEALLOC(manager);
         }
       }
       else
       {
         destroy_manager_socket(manager);
-        llrp_manager_dealloc(manager);
+        LLRP_MANAGER_DEALLOC(manager);
         res = kEtcPalErrNoMem;
       }
     }
     else
     {
-      llrp_manager_dealloc(manager);
+      LLRP_MANAGER_DEALLOC(manager);
     }
   }
   return res;
@@ -751,7 +763,7 @@ void destroy_manager(LlrpManager* manager, bool remove_from_tree)
     {
       etcpal_rbtree_remove(&state.managers, manager);
     }
-    llrp_manager_dealloc(manager);
+    LLRP_MANAGER_DEALLOC(manager);
   }
 }
 

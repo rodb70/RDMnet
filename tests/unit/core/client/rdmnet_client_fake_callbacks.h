@@ -20,7 +20,7 @@
 #define RDMNET_CLIENT_FAKE_CALLBACKS_H
 
 #include "fff.h"
-#include "rdmnet/client.h"
+#include "rdmnet/core/client.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -17,42 +17,23 @@
  * https://github.com/ETCLabs/RDMnet
  *****************************************************************************/
 
-#ifndef RDMNET_PRIVATE_LLRP_H_
-#define RDMNET_PRIVATE_LLRP_H_
+#ifndef RDMNET_CPP_CORE_H_
+#define RDMNET_CPP_CORE_H_
 
-#include <stdbool.h>
-#include "etcpal/error.h"
-#include "etcpal/inet.h"
-#include "etcpal/rbtree.h"
-#include "etcpal/socket.h"
+/// \file rdmnet/cpp/core.h
+/// \brief C++ wrapper for the RDMnet Core Library init/deinit functions
+
+#include "etcpal/cpp/error.h"
 #include "rdmnet/core.h"
-#include "rdmnet/core/llrp.h"
 
-typedef enum
+namespace rdmnet
 {
-  kLlrpSocketTypeManager,
-  kLlrpSocketTypeTarget
-} llrp_socket_t;
+etcpal::Error Init(const EtcPalLogParams* log_params = nullptr, const RdmnetNetintConfig* netint_config = nullptr);
+etcpal::Error Init(const EtcPalLogParams* log_params = nullptr, const std::vector<RdmnetMcastNetintId>& mcast_netints);
+etcpal::Error Init(const etcpal::Logger& logger, const RdmnetNetintConfig* netint_config = nullptr);
+etcpal::Error Init(const etcpal::Logger& logger, const std::vector<RdmnetMcastNetintId>& mcast_netints);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+void Deinit();
+};  // namespace rdmnet
 
-extern const EtcPalSockAddr* kLlrpIpv4RespAddr;
-extern const EtcPalSockAddr* kLlrpIpv6RespAddr;
-extern const EtcPalSockAddr* kLlrpIpv4RequestAddr;
-extern const EtcPalSockAddr* kLlrpIpv6RequestAddr;
-
-etcpal_error_t llrp_init(void);
-void llrp_deinit(void);
-
-void llrp_tick(void);
-
-etcpal_error_t llrp_recv_netint_add(const RdmnetMcastNetintId* netint, llrp_socket_t llrp_type);
-void llrp_recv_netint_remove(const RdmnetMcastNetintId* netint, llrp_socket_t llrp_type);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* RDMNET_PRIVATE_LLRP_H_ */
+#endif  // RDMNET_CPP_CORE_H_

@@ -21,7 +21,7 @@
 #include <map>
 #include <utility>
 #include "etcpal/cpp/inet.h"
-#include "rdmnet/client.h"
+#include "rdmnet/core/client.h"
 #include "rdmnet_mock/core.h"
 #include "rdmnet_mock/core/connection.h"
 #include "rdmnet_mock/core/discovery.h"

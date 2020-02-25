@@ -102,7 +102,7 @@ static int target_compare_by_cid(const EtcPalRbTree* self, const void* value_a, 
 
 /*************************** Function definitions ****************************/
 
-etcpal_error_t rdmnet_llrp_target_init()
+etcpal_error_t llrp_target_init(void)
 {
   etcpal_error_t res = kEtcPalErrOk;
 
@@ -138,24 +138,25 @@ static void target_dealloc(const EtcPalRbTree* self, EtcPalRbNode* node)
   target_node_free(node);
 }
 
-void rdmnet_llrp_target_deinit()
+void llrp_target_deinit()
 {
   etcpal_rbtree_clear_with_cb(&state.targets, target_dealloc);
   memset(&state, 0, sizeof state);
 }
 
-/*! \brief Create a new LLRP target instance.
+/*!
+ * \brief Create a new LLRP target instance.
  *
- *  \param[in] config Configuration parameters for the LLRP target to be created.
- *  \param[out] handle Handle to the newly-created target instance.
- *  \return #kEtcPalErrOk: Target created successfully.
- *  \return #kEtcPalErrInvalid: Invalid argument provided.
- *  \return #kEtcPalErrNotInit: Module not initialized.
- *  \return #kEtcPalErrNoMem: No memory to allocate additional target instance.
- *  \return #kEtcPalErrSys: An internal library or system call error occurred.
- *  \return Note: Other error codes might be propagated from underlying socket calls.
+ * \param[in] config Configuration parameters for the LLRP target to be created.
+ * \param[out] handle Handle to the newly-created target instance.
+ * \return #kEtcPalErrOk: Target created successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument provided.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNoMem: No memory to allocate additional target instance.
+ * \return #kEtcPalErrSys: An internal library or system call error occurred.
+ * \return Note: Other error codes might be propagated from underlying socket calls.
  */
-etcpal_error_t rdmnet_llrp_target_create(const LlrpTargetConfig* config, llrp_target_t* handle)
+etcpal_error_t llrp_target_create(const LlrpTargetConfig* config, llrp_target_t* handle)
 {
   if (!config || !handle)
     return kEtcPalErrInvalid;
@@ -179,13 +180,14 @@ etcpal_error_t rdmnet_llrp_target_create(const LlrpTargetConfig* config, llrp_ta
   return res;
 }
 
-/*! \brief Destroy an LLRP target instance.
+/*!
+ * \brief Destroy an LLRP target instance.
  *
- *  The handle will be invalidated for any future calls to API functions.
+ * The handle will be invalidated for any future calls to API functions.
  *
- *  \param[in] handle Handle to target to destroy.
+ * \param[in] handle Handle to target to destroy.
  */
-void rdmnet_llrp_target_destroy(llrp_target_t handle)
+void llrp_target_destroy(llrp_target_t handle)
 {
   LlrpTarget* target;
   etcpal_error_t res = get_target(handle, &target);
@@ -196,17 +198,18 @@ void rdmnet_llrp_target_destroy(llrp_target_t handle)
   release_target(target);
 }
 
-/*! \brief Update the Broker connection state of an LLRP target.
+/*!
+ * \brief Update the Broker connection state of an LLRP target.
  *
- *  If an LLRP target is associated with an RPT client, this should be called each time the client
- *  connects or disconnects from a broker. Controllers are considered not connected when they are
- *  not connected to any broker. This affects whether the LLRP target responds to filtered LLRP
- *  probe requests.
+ * If an LLRP target is associated with an RPT client, this should be called each time the client
+ * connects or disconnects from a broker. Controllers are considered not connected when they are
+ * not connected to any broker. This affects whether the LLRP target responds to filtered LLRP
+ * probe requests.
  *
- *  \param[in] handle Handle to LLRP target for which to update the connection state.
- *  \param[in] connected_to_broker Whether the LLRP target is currently connected to a broker.
+ * \param[in] handle Handle to LLRP target for which to update the connection state.
+ * \param[in] connected_to_broker Whether the LLRP target is currently connected to a broker.
  */
-void rdmnet_llrp_target_update_connection_state(llrp_target_t handle, bool connected_to_broker)
+void llrp_target_update_connection_state(llrp_target_t handle, bool connected_to_broker)
 {
   LlrpTarget* target;
   etcpal_error_t res = get_target(handle, &target);
@@ -217,50 +220,80 @@ void rdmnet_llrp_target_update_connection_state(llrp_target_t handle, bool conne
   }
 }
 
-/*! \brief Send an RDM response from an LLRP target.
+/*!
+ * \brief Send an RDM ACK response from an LLRP target.
  *
- *  \param[in] handle Handle to LLRP target from which to send an RDM response.
- *  \param[in] resp Response to send.
- *  \return #kEtcPalErrOk: Response sent successfully.
- *  \return #kEtcPalErrInvalid: Invalid argument provided.
- *  \return #kEtcPalErrNotInit: Module not initialized.
- *  \return #kEtcPalErrNotFound: Handle is not associated with a valid LLRP target instance.
- *  \return Note: Other error codes might be propagated from underlying socket calls.
+ * \param[in] handle Handle to LLRP target from which to send the response.
+ * \param[in] received_cmd Previously-received command that the ACK is a response to.
+ * \param[in] response_data Parameter data that goes with this ACK, or NULL if no data.
+ * \param[in] response_data_len Length in bytes of response_data, or 0 if no data.
+ * \return #kEtcPalErrOk: ACK sent successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument provided.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNotFound: Handle is not associated with a valid LLRP target instance.
+ * \return Note: Other error codes might be propagated from underlying socket calls.
  */
-etcpal_error_t rdmnet_llrp_send_rdm_response(llrp_target_t handle, const LlrpLocalRdmResponse* resp)
+etcpal_error_t llrp_target_send_ack(llrp_target_t handle, const LlrpRemoteRdmCommand* received_cmd,
+                                    const uint8_t* response_data, uint8_t response_data_len)
 {
-  if (!resp)
-    return kEtcPalErrInvalid;
+  ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(received_cmd);
+  ETCPAL_UNUSED_ARG(response_data);
+  ETCPAL_UNUSED_ARG(response_data_len);
+  return kEtcPalErrNotImpl;
+  //  if (!resp)
+  //    return kEtcPalErrInvalid;
+  //
+  //  RdmBuffer resp_buf;
+  //  etcpal_error_t res = rdmresp_pack_response(&resp->rdm, &resp_buf);
+  //  if (res != kEtcPalErrOk)
+  //    return res;
+  //
+  //  LlrpTarget* target;
+  //  res = get_target(handle, &target);
+  //  if (res == kEtcPalErrOk)
+  //  {
+  //    LlrpTargetNetintInfo* netint = get_target_netint(target, &resp->netint_id);
+  //    if (netint)
+  //    {
+  //      LlrpHeader header;
+  //
+  //      header.dest_cid = resp->dest_cid;
+  //      header.sender_cid = target->keys.cid;
+  //      header.transaction_number = resp->seq_num;
+  //
+  //      res = send_llrp_rdm_response(netint->send_sock, netint->send_buf, (netint->id.ip_type == kEtcPalIpTypeV6),
+  //                                   &header, &resp_buf);
+  //    }
+  //    else
+  //    {
+  //      // Something has changed about the system network interfaces since this command was received.
+  //      res = kEtcPalErrSys;
+  //    }
+  //    release_target(target);
+  //  }
+  //  return res;
+}
 
-  RdmBuffer resp_buf;
-  etcpal_error_t res = rdmresp_pack_response(&resp->rdm, &resp_buf);
-  if (res != kEtcPalErrOk)
-    return res;
-
-  LlrpTarget* target;
-  res = get_target(handle, &target);
-  if (res == kEtcPalErrOk)
-  {
-    LlrpTargetNetintInfo* netint = get_target_netint(target, &resp->netint_id);
-    if (netint)
-    {
-      LlrpHeader header;
-
-      header.dest_cid = resp->dest_cid;
-      header.sender_cid = target->keys.cid;
-      header.transaction_number = resp->seq_num;
-
-      res = send_llrp_rdm_response(netint->send_sock, netint->send_buf, (netint->id.ip_type == kEtcPalIpTypeV6),
-                                   &header, &resp_buf);
-    }
-    else
-    {
-      // Something has changed about the system network interfaces since this command was received.
-      res = kEtcPalErrSys;
-    }
-    release_target(target);
-  }
-  return res;
+/*!
+ * \brief Send an RDM NACK response from an LLRP target.
+ *
+ * \param[in] handle Handle to LLRP target from which to send the response.
+ * \param[in] received_cmd Previously-received command that the NACK is a response to.
+ * \param[in] nack_reason RDM NACK reason code to send with the NACK.
+ * \return #kEtcPalErrOk: NACK sent successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument provided.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNotFound: Handle is not associated with a valid LLRP target instance.
+ * \return Note: Other error codes might be propagated from underlying socket calls.
+ */
+etcpal_error_t llrp_target_send_nack(llrp_target_t handle, const LlrpRemoteRdmCommand* received_cmd,
+                                     rdm_nack_reason_t nack_reason)
+{
+  ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(received_cmd);
+  ETCPAL_UNUSED_ARG(nack_reason);
+  return kEtcPalErrNotImpl;
 }
 
 void process_target_state(LlrpTarget* target)
@@ -298,7 +331,7 @@ void process_target_state(LlrpTarget* target)
   }
 }
 
-void rdmnet_llrp_target_tick()
+void llrp_target_tick(void)
 {
   if (!rdmnet_core_initialized())
     return;
@@ -418,57 +451,62 @@ void target_data_received(const uint8_t* data, size_t data_size, const RdmnetMca
 void handle_llrp_message(const uint8_t* data, size_t data_size, LlrpTarget* target, LlrpTargetNetintInfo* netint,
                          TargetCallbackDispatchInfo* cb)
 {
-  LlrpMessage msg;
-  LlrpMessageInterest interest;
-  interest.my_cid = target->keys.cid;
-  interest.interested_in_probe_reply = false;
-  interest.interested_in_probe_request = true;
-  interest.my_uid = target->uid;
-
-  if (parse_llrp_message(data, data_size, &interest, &msg))
-  {
-    switch (msg.vector)
-    {
-      case VECTOR_LLRP_PROBE_REQUEST:
-      {
-        const RemoteProbeRequest* request = LLRP_MSG_GET_PROBE_REQUEST(&msg);
-        // TODO allow multiple probe replies to be queued
-        if (request->contains_my_uid && !netint->reply_pending)
-        {
-          uint32_t backoff_ms;
-
-          // Check the filter values.
-          if (!((request->filter & LLRP_FILTERVAL_BROKERS_ONLY) && target->component_type != kLlrpCompBroker) &&
-              !(request->filter & LLRP_FILTERVAL_CLIENT_CONN_INACTIVE && target->connected_to_broker))
-          {
-            netint->reply_pending = true;
-            netint->pending_reply_cid = msg.header.sender_cid;
-            netint->pending_reply_trans_num = msg.header.transaction_number;
-            backoff_ms = (uint32_t)(rand() * LLRP_MAX_BACKOFF_MS / RAND_MAX);
-            etcpal_timer_start(&netint->reply_backoff, backoff_ms);
-          }
-        }
-        // Even if we got a valid probe request, we are starting a backoff timer, so there's nothing
-        // else to do at this time.
-        break;
-      }
-      case VECTOR_LLRP_RDM_CMD:
-      {
-        LlrpRemoteRdmCommand* remote_cmd = &cb->args.cmd_received.cmd;
-        if (kEtcPalErrOk == rdmresp_unpack_command(LLRP_MSG_GET_RDM(&msg), &remote_cmd->rdm))
-        {
-          remote_cmd->src_cid = msg.header.sender_cid;
-          remote_cmd->seq_num = msg.header.transaction_number;
-          remote_cmd->netint_id = netint->id;
-
-          cb->which = kTargetCallbackRdmCmdReceived;
-          fill_callback_info(target, cb);
-        }
-      }
-      default:
-        break;
-    }
-  }
+  ETCPAL_UNUSED_ARG(data);
+  ETCPAL_UNUSED_ARG(data_size);
+  ETCPAL_UNUSED_ARG(target);
+  ETCPAL_UNUSED_ARG(netint);
+  ETCPAL_UNUSED_ARG(cb);
+  //  LlrpMessage msg;
+  //  LlrpMessageInterest interest;
+  //  interest.my_cid = target->keys.cid;
+  //  interest.interested_in_probe_reply = false;
+  //  interest.interested_in_probe_request = true;
+  //  interest.my_uid = target->uid;
+  //
+  //  if (parse_llrp_message(data, data_size, &interest, &msg))
+  //  {
+  //    switch (msg.vector)
+  //    {
+  //      case VECTOR_LLRP_PROBE_REQUEST:
+  //      {
+  //        const RemoteProbeRequest* request = LLRP_MSG_GET_PROBE_REQUEST(&msg);
+  //        // TODO allow multiple probe replies to be queued
+  //        if (request->contains_my_uid && !netint->reply_pending)
+  //        {
+  //          uint32_t backoff_ms;
+  //
+  //          // Check the filter values.
+  //          if (!((request->filter & LLRP_FILTERVAL_BROKERS_ONLY) && target->component_type != kLlrpCompBroker) &&
+  //              !(request->filter & LLRP_FILTERVAL_CLIENT_CONN_INACTIVE && target->connected_to_broker))
+  //          {
+  //            netint->reply_pending = true;
+  //            netint->pending_reply_cid = msg.header.sender_cid;
+  //            netint->pending_reply_trans_num = msg.header.transaction_number;
+  //            backoff_ms = (uint32_t)(rand() * LLRP_MAX_BACKOFF_MS / RAND_MAX);
+  //            etcpal_timer_start(&netint->reply_backoff, backoff_ms);
+  //          }
+  //        }
+  //        // Even if we got a valid probe request, we are starting a backoff timer, so there's nothing
+  //        // else to do at this time.
+  //        break;
+  //      }
+  //      case VECTOR_LLRP_RDM_CMD:
+  //      {
+  //        LlrpRemoteRdmCommand* remote_cmd = &cb->args.cmd_received.cmd;
+  //        if (kEtcPalErrOk == rdmresp_unpack_command(LLRP_MSG_GET_RDM(&msg), &remote_cmd->rdm))
+  //        {
+  //          remote_cmd->src_cid = msg.header.sender_cid;
+  //          remote_cmd->seq_num = msg.header.transaction_number;
+  //          remote_cmd->netint_id = netint->id;
+  //
+  //          cb->which = kTargetCallbackRdmCmdReceived;
+  //          fill_callback_info(target, cb);
+  //        }
+  //      }
+  //      default:
+  //        break;
+  //    }
+  //  }
 }
 
 void fill_callback_info(const LlrpTarget* target, TargetCallbackDispatchInfo* info)
@@ -480,16 +518,17 @@ void fill_callback_info(const LlrpTarget* target, TargetCallbackDispatchInfo* in
 
 void deliver_callback(TargetCallbackDispatchInfo* info)
 {
-  switch (info->which)
-  {
-    case kTargetCallbackRdmCmdReceived:
-      if (info->cbs.rdm_cmd_received)
-        info->cbs.rdm_cmd_received(info->handle, &info->args.cmd_received.cmd, info->context);
-      break;
-    case kTargetCallbackNone:
-    default:
-      break;
-  }
+  ETCPAL_UNUSED_ARG(info);
+  //  switch (info->which)
+  //  {
+  //    case kTargetCallbackRdmCmdReceived:
+  //      if (info->cbs.rdm_cmd_received)
+  //        info->cbs.rdm_cmd_received(info->handle, &info->args.cmd_received.cmd, info->context);
+  //      break;
+  //    case kTargetCallbackNone:
+  //    default:
+  //      break;
+  //  }
 }
 
 etcpal_error_t setup_target_netint(const RdmnetMcastNetintId* netint_id, LlrpTargetNetintInfo* netint)

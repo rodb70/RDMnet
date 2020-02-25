@@ -24,10 +24,14 @@
 #ifndef RDMNET_PRIVATE_CLIENT_H_
 #define RDMNET_PRIVATE_CLIENT_H_
 
-#include "rdmnet/client.h"
+#include "rdmnet/core/client.h"
 #include "rdmnet/defs.h"
 #include "rdmnet/core/discovery.h"
 #include "rdmnet/core/connection.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef enum
 {
@@ -178,5 +182,12 @@ typedef struct ClientCallbackDispatchInfo
     BrokerMsgReceivedArgs broker_msg_received;
   } common_args;
 } ClientCallbackDispatchInfo;
+
+etcpal_error_t rdmnet_client_init(const EtcPalLogParams* lparams, const RdmnetNetintConfig* netint_config);
+void rdmnet_client_deinit();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* RDMNET_PRIVATE_CLIENT_H_ */

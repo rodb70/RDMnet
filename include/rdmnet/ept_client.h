@@ -17,42 +17,12 @@
  * https://github.com/ETCLabs/RDMnet
  *****************************************************************************/
 
-#ifndef RDMNET_PRIVATE_LLRP_H_
-#define RDMNET_PRIVATE_LLRP_H_
+/*!
+ * \file rdmnet/ept_client.h
+ * \brief Definitions for the RDMnet EPT Client API
+ */
 
-#include <stdbool.h>
-#include "etcpal/error.h"
-#include "etcpal/inet.h"
-#include "etcpal/rbtree.h"
-#include "etcpal/socket.h"
-#include "rdmnet/core.h"
-#include "rdmnet/core/llrp.h"
+#ifndef RDMNET_EPT_CLIENT_H_
+#define RDMNET_EPT_CLIENT_H_
 
-typedef enum
-{
-  kLlrpSocketTypeManager,
-  kLlrpSocketTypeTarget
-} llrp_socket_t;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-extern const EtcPalSockAddr* kLlrpIpv4RespAddr;
-extern const EtcPalSockAddr* kLlrpIpv6RespAddr;
-extern const EtcPalSockAddr* kLlrpIpv4RequestAddr;
-extern const EtcPalSockAddr* kLlrpIpv6RequestAddr;
-
-etcpal_error_t llrp_init(void);
-void llrp_deinit(void);
-
-void llrp_tick(void);
-
-etcpal_error_t llrp_recv_netint_add(const RdmnetMcastNetintId* netint, llrp_socket_t llrp_type);
-void llrp_recv_netint_remove(const RdmnetMcastNetintId* netint, llrp_socket_t llrp_type);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* RDMNET_PRIVATE_LLRP_H_ */
+#endif /* RDMNET_EPT_CLIENT_H_ */

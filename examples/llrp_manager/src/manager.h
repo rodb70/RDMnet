@@ -25,7 +25,7 @@
 #include "etcpal/cpp/uuid.h"
 #include "etcpal/log.h"
 #include "rdm/message.h"
-#include "rdmnet/core/llrp_manager.h"
+#include "rdmnet/llrp_manager.h"
 
 struct LLRPTargetInfo
 {

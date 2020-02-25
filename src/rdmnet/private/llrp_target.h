@@ -109,10 +109,10 @@ typedef struct TargetCallbackDispatchInfo
 extern "C" {
 #endif
 
-etcpal_error_t rdmnet_llrp_target_init();
-void rdmnet_llrp_target_deinit();
+etcpal_error_t llrp_target_init(void);
+void llrp_target_deinit(void);
 
-void rdmnet_llrp_target_tick();
+void llrp_target_tick(void);
 
 void target_data_received(const uint8_t* data, size_t data_size, const RdmnetMcastNetintId* netint);
 

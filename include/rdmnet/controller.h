@@ -29,7 +29,7 @@
 #include "etcpal/uuid.h"
 #include "etcpal/inet.h"
 #include "rdm/uid.h"
-#include "rdmnet/client.h"
+#include "rdmnet/core/client.h"
 
 /*!
  * \defgroup rdmnet_controller Controller API
@@ -191,20 +191,47 @@ typedef struct RdmnetControllerRdmData
 /*! A set of information that defines the startup parameters of an RDMnet Controller. */
 typedef struct RdmnetControllerConfig
 {
+  /****** Required Values ******/
+
   /*! The controller's CID. */
   EtcPalUuid cid;
   /*! A set of callbacks for the controller to receive RDMnet notifications. */
   RdmnetControllerCallbacks callbacks;
-  /*! Callbacks for the controller to receive RDM commands over RDMnet. Either this or rdm_data
-   *  must be provided. */
+  /*!
+   * Callbacks for the controller to receive RDM commands over RDMnet. Either this or rdm_data must
+   * be provided.
+   */
   RdmnetControllerRdmCmdCallbacks rdm_callbacks;
-  /*! Pointer to opaque data passed back with each callback. Can be NULL. */
-  void* callback_context;
-  /*! Data for the library to use for handling RDM commands internally. Either this or
-   *  rdm_callbacks must be provided. */
+  /*!
+   * Data for the library to use for handling RDM commands internally. Either this or rdm_callbacks
+   * must be provided.
+   */
   RdmnetControllerRdmData rdm_data;
-  /*! Optional configuration data for the controller's RPT Client functionality. */
-  RptClientOptionalConfig optional;
+
+  /****** Optional Values ******/
+
+  /*! (optional) Pointer to opaque data passed back with each callback. */
+  void* callback_context;
+  /*!
+   * (optional) The controller's UID. This will be initialized with a Dynamic UID request using the
+   * initialization functions/macros for this structure. If you want to use a static UID instead,
+   * just fill this in with the static UID after initializing.
+   */
+  RdmUid uid;
+  /*! (optional) The controller's configured search domain for discovery. */
+  const char* search_domain;
+  /*!
+   * (optional) Whether to create an LLRP target associated with this controller. Default is false.
+   */
+  bool create_llrp_target;
+  /*!
+   * (optional) A set of network interfaces to use for the LLRP target associated with this
+   * controller. If NULL, the set passed to rdmnet_core_init() will be used, or all network
+   * interfaces on the system if that was not provided.
+   */
+  RdmnetMcastNetintId* llrp_netint_arr;
+  /*! (optional) The size of llrp_netint_arr. */
+  size_t num_llrp_netints;
 } RdmnetControllerConfig;
 
 /*!
@@ -296,9 +323,6 @@ typedef struct RdmnetControllerConfig
     (configptr)->rdm_callbacks.llrp_rdm_command_received = (llrp_rdm_cmd_received_cb);                    \
   } while (0)
 
-etcpal_error_t rdmnet_controller_init(const EtcPalLogParams* lparams, const RdmnetNetintConfig* netint_config);
-void rdmnet_controller_deinit();
-
 void rdmnet_controller_config_init(RdmnetControllerConfig* config, uint16_t manufacturer_id);
 
 etcpal_error_t rdmnet_controller_create(const RdmnetControllerConfig* config, rdmnet_controller_t* handle);
@@ -312,16 +336,28 @@ etcpal_error_t rdmnet_controller_remove_scope(rdmnet_controller_t handle, rdmnet
 etcpal_error_t rdmnet_controller_get_scope(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
                                            RdmnetScopeConfig* scope_config);
 
-etcpal_error_t rdmnet_controller_send_rdm_command(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
-                                                  const RdmnetLocalRdmCommand* cmd, uint32_t* seq_num);
-etcpal_error_t rdmnet_controller_send_rdm_response(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
-                                                   const RdmnetLocalRdmResponse* resp);
-etcpal_error_t rdmnet_controller_send_llrp_response(rdmnet_controller_t handle, const LlrpLocalRdmResponse* resp);
-
 etcpal_error_t rdmnet_controller_request_client_list(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle);
 etcpal_error_t rdmnet_controller_request_dynamic_uid_mappings(rdmnet_controller_t handle,
                                                               rdmnet_client_scope_t scope_handle, const RdmUid* uids,
                                                               size_t num_uids);
+
+etcpal_error_t rdmnet_controller_send_rdm_command(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
+                                                  const RdmnetLocalRdmCommand* cmd, uint32_t* seq_num);
+
+etcpal_error_t rdmnet_controller_send_rdm_ack(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
+                                              const RdmnetRemoteRdmCommand* received_cmd, const uint8_t* response_data,
+                                              size_t response_data_len);
+etcpal_error_t rdmnet_controller_send_rdm_nack(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
+                                               const RdmnetRemoteRdmCommand* received_cmd,
+                                               rdm_nack_reason_t nack_reason);
+etcpal_error_t rdmnet_controller_send_status(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
+                                             const RdmnetRemoteRdmCommand* received_cmd, rpt_status_code_t status_code,
+                                             const char* status_string);
+
+etcpal_error_t rdmnet_controller_send_llrp_ack(rdmnet_controller_t handle, const LlrpRemoteRdmCommand* received_cmd,
+                                               const uint8_t* response_data, uint8_t response_data_len);
+etcpal_error_t rdmnet_controller_send_llrp_nack(rdmnet_controller_t handle, const LlrpLocalRdmCommand* received_cmd,
+                                                rdm_nack_reason_t nack_reason);
 
 #ifdef __cplusplus
 };

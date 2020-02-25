@@ -11,7 +11,7 @@
 #include "rdmnet/core/message.h"
 #include "rdmnet/core/rpt_prot.h"
 
-#include "rdmnet/client.h"
+#include "rdmnet/core/client.h"
 #include "rdmnet/private/client.h"
 
 #define SIZE_COLUMN_TAB_OFFSET 4
@@ -81,7 +81,7 @@ void PrintAllSizes()
   PRINT_SIZE(RptRdmBufList);
   PRINT_SIZE(RptMessage);
 
-  PRINT_HEADER_NAME("rdmnet/client.h");
+  PRINT_HEADER_NAME("rdmnet/core/client.h");
   PRINT_SIZE(RdmnetRptClientConfig);
   PRINT_SIZE(ClientCallbackDispatchInfo);
 }

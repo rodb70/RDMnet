@@ -50,7 +50,8 @@ extern "C" {
 
 typedef struct LlrpTargetCallbacks
 {
-  void (*rdm_cmd_received)(llrp_target_t handle, const LlrpRemoteRdmCommand* cmd, void* context);
+  llrp_response_action_t (*rdm_cmd_received)(llrp_target_t handle, const LlrpRemoteRdmCommand* cmd,
+                                             LlrpSyncRdmResponse* response, void* context);
 } LlrpTargetCallbacks;
 
 typedef struct LlrpTargetOptionalConfig
@@ -81,11 +82,15 @@ typedef struct LlrpTargetConfig
 #define LLRP_TARGET_CONFIG_INIT(targetcfgptr, manu_id) \
   LLRP_TARGET_INIT_OPTIONAL_CONFIG_VALUES(&(targetcfgptr)->optional, manu_id)
 
-etcpal_error_t rdmnet_llrp_target_create(const LlrpTargetConfig* config, llrp_target_t* handle);
-void rdmnet_llrp_target_destroy(llrp_target_t handle);
+etcpal_error_t llrp_target_create(const LlrpTargetConfig* config, llrp_target_t* handle);
+void llrp_target_destroy(llrp_target_t handle);
 
-void rdmnet_llrp_target_update_connection_state(llrp_target_t handle, bool connected_to_broker);
-etcpal_error_t rdmnet_llrp_send_rdm_response(llrp_target_t handle, const LlrpLocalRdmResponse* resp);
+void llrp_target_update_connection_state(llrp_target_t handle, bool connected_to_broker);
+
+etcpal_error_t llrp_target_send_ack(llrp_target_t handle, const LlrpRemoteRdmCommand* received_cmd,
+                                    const uint8_t* response_data, uint8_t response_data_len);
+etcpal_error_t llrp_target_send_nack(llrp_target_t handle, const LlrpRemoteRdmCommand* received_cmd,
+                                     rdm_nack_reason_t nack_reason);
 
 #ifdef __cplusplus
 }

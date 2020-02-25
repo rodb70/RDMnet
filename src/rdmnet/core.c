@@ -24,6 +24,7 @@
 #include "etcpal/timer.h"
 #include "rdmnet/private/discovery.h"
 #include "rdmnet/private/message.h"
+#include "rdmnet/private/client.h"
 #include "rdmnet/private/core.h"
 #include "rdmnet/private/connection.h"
 #include "rdmnet/private/llrp.h"
@@ -133,7 +134,7 @@ etcpal_error_t rdmnet_core_init(const EtcPalLogParams* log_params, const RdmnetN
       if (res == kEtcPalErrOk)
         disc_initted = ((res = rdmnet_disc_init(netint_config)) == kEtcPalErrOk);
       if (res == kEtcPalErrOk)
-        llrp_initted = ((res = rdmnet_llrp_init()) == kEtcPalErrOk);
+        llrp_initted = ((res = llrp_init()) == kEtcPalErrOk);
 
 #if RDMNET_USE_TICK_THREAD
       if (res == kEtcPalErrOk)
@@ -162,7 +163,7 @@ etcpal_error_t rdmnet_core_init(const EtcPalLogParams* log_params, const RdmnetN
         // Clean up. Starting the thread is the last thing with a failure condition, so if we get
         // here it has not been started.
         if (llrp_initted)
-          rdmnet_llrp_deinit();
+          llrp_deinit();
         if (disc_initted)
           rdmnet_disc_deinit();
         if (conn_initted)
@@ -201,7 +202,7 @@ void rdmnet_core_deinit()
     {
       rdmnet_log_params = NULL;
 
-      rdmnet_llrp_deinit();
+      llrp_deinit();
       rdmnet_disc_deinit();
       rdmnet_conn_deinit();
       rdmnet_mcast_deinit();
@@ -289,7 +290,7 @@ void rdmnet_core_tick()
   {
     rdmnet_disc_tick();
     rdmnet_conn_tick();
-    rdmnet_llrp_tick();
+    llrp_tick();
 
     etcpal_timer_reset(&core_state.tick_timer);
   }

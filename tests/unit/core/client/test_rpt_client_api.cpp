@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "rdmnet/client.h"
+#include "rdmnet/core/client.h"
 
 #include "rdmnet_mock/core.h"
 #include "rdmnet_mock/private/core.h"

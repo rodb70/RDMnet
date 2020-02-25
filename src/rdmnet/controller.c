@@ -74,37 +74,17 @@ static const RptClientCallbacks client_callbacks =
 
 /*************************** Function definitions ****************************/
 
-/*!
- * \brief Initialize the RDMnet Controller library.
- *
- * Only one call to this function can be made per application.
- *
- * \param[in] lparams Optional: log parameters to pass to the underlying library.
- * \param[in] netint_config Optional: set of network interfaces to which to restrict multicast
- *                          operation.
- * \return #kEtcPalErrOk: Initialization successful.
- * \return Errors forwarded from rdmnet_client_init()
- */
-etcpal_error_t rdmnet_controller_init(const EtcPalLogParams* lparams, const RdmnetNetintConfig* netint_config)
+etcpal_error_t rdmnet_controller_init(void)
 {
-#if !RDMNET_DYNAMIC_MEM
-  etcpal_error_t res = etcpal_mempool_init(rdmnet_controllers);
-  if (res != kEtcPalErrOk)
-    return res;
+#if RDMNET_DYNAMIC_MEM
+  return kEtcPalErrOk;
+#else
+  return etcpal_mempool_init(rdmnet_controllers);
 #endif
-
-  return rdmnet_client_init(lparams, netint_config);
 }
 
-/*!
- * \brief Deinitialize the RDMnet Controller library.
- *
- * Only one call to this function can be made per application. No RDMnet API functions are usable
- * after this function is called.
- */
-void rdmnet_controller_deinit()
+void rdmnet_controller_deinit(void)
 {
-  rdmnet_client_deinit();
 }
 
 /*!

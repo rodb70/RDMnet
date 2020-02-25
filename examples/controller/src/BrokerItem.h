@@ -20,7 +20,7 @@
 #pragma once
 
 #include "etcpal/cpp/inet.h"
-#include "rdmnet/client.h"
+#include "rdmnet/core/client.h"
 #include "RDMnetNetworkItem.h"
 #include "RDMnetClientItem.h"
 

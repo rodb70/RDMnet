@@ -28,7 +28,7 @@
 #include <stdbool.h>
 #include "etcpal/uuid.h"
 #include "rdm/uid.h"
-#include "rdmnet/client.h"
+#include "rdmnet/core/client.h"
 
 /*!
  * \defgroup rdmnet_device Device API
@@ -181,17 +181,22 @@ typedef struct RdmnetDeviceConfig
     (configptr)->callback_context = (cb_context);                                                      \
   } while (0)
 
-etcpal_error_t rdmnet_device_init(const EtcPalLogParams* lparams, const RdmnetNetintConfig* netint_config);
-void rdmnet_device_deinit();
-
 void rdmnet_device_config_init(RdmnetDeviceConfig* config, uint16_t manufacturer_id);
 
 etcpal_error_t rdmnet_device_create(const RdmnetDeviceConfig* config, rdmnet_device_t* handle);
 etcpal_error_t rdmnet_device_destroy(rdmnet_device_t handle, rdmnet_disconnect_reason_t disconnect_reason);
 
-etcpal_error_t rdmnet_device_send_rdm_response(rdmnet_device_t handle, const RdmnetLocalRdmResponse* resp);
-etcpal_error_t rdmnet_device_send_status(rdmnet_device_t handle, const RdmnetLocalRptStatus* status);
-etcpal_error_t rdmnet_device_send_llrp_response(rdmnet_device_t handle, const LlrpLocalRdmResponse* resp);
+etcpal_error_t rdmnet_device_send_rdm_ack(rdmnet_device_t handle, const RdmnetRemoteRdmCommand* received_cmd,
+                                          const uint8_t* response_data, size_t response_data_len);
+etcpal_error_t rdmnet_device_send_rdm_nack(rdmnet_device_t handle, const RdmnetRemoteRdmCommand* received_cmd,
+                                           rdm_nack_reason_t nack_reason);
+etcpal_error_t rdmnet_device_send_status(rdmnet_device_t handle, const RdmnetRemoteRdmCommand* received_cmd,
+                                         rpt_status_code_t status_code, const char* status_string);
+
+etcpal_error_t rdmnet_device_send_llrp_ack(rdmnet_device_t handle, const LlrpRemoteRdmCommand* received_cmd,
+                                           const uint8_t* response_data, uint8_t response_data_len);
+etcpal_error_t rdmnet_device_send_llrp_nack(rdmnet_device_t handle, const LlrpLocalRdmCommand* received_cmd,
+                                            rdm_nack_reason_t nack_reason);
 
 etcpal_error_t rdmnet_device_request_dynamic_uids(rdmnet_device_t handle, const BrokerDynamicUidRequest* requests,
                                                   size_t num_requests);

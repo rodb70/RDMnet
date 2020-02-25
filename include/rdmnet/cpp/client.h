@@ -23,7 +23,7 @@
 #define RDMNET_CPP_CLIENT_H_
 
 #include "etcpal/cpp/inet.h"
-#include "rdmnet/client.h"
+#include "rdmnet/core/client.h"
 
 namespace rdmnet
 {

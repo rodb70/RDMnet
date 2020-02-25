@@ -83,7 +83,7 @@ bool LLRPManager::Startup(const etcpal::Uuid& my_cid, const EtcPalLogParams* log
       config.netint.ip_type = netint->addr.type;
       config.netint.index = netint->index;
       llrp_manager_t handle;
-      etcpal::Error res = rdmnet_llrp_manager_create(&config, &handle);
+      etcpal::Error res = llrp_manager_create(&config, &handle);
       if (res)
       {
         managers_.insert(std::make_pair(handle, *netint));
@@ -107,7 +107,7 @@ void LLRPManager::Shutdown()
 {
   for (const auto& netint : managers_)
   {
-    rdmnet_llrp_manager_destroy(netint.first);
+    llrp_manager_destroy(netint.first);
   }
   rdmnet_core_deinit();
 }
@@ -388,7 +388,7 @@ void LLRPManager::Discover(llrp_manager_t manager_handle)
   discovery_active_ = true;
 
   printf("Starting LLRP discovery...\n");
-  etcpal::Error res = rdmnet_llrp_start_discovery(mgr_pair->first, 0);
+  etcpal::Error res = llrp_manager_start_discovery(mgr_pair->first, 0);
   if (res)
   {
     while (discovery_active_)
@@ -841,7 +841,7 @@ bool LLRPManager::SendRDMAndGetResponse(llrp_manager_t manager, const EtcPalUuid
 
   pending_command_response_ = true;
   pending_resp_cid_ = cmd.dest_cid;
-  etcpal::Error res = rdmnet_llrp_send_rdm_command(manager, &cmd, &pending_resp_seq_num_);
+  etcpal::Error res = llrp_manager_send_rdm_command(manager, &cmd, &pending_resp_seq_num_);
   if (res)
   {
     EtcPalTimer resp_timer;

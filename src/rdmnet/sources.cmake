@@ -7,21 +7,22 @@
 # The "RDMnet API" layer: Top-level public API logic called by applications.
 
 set(RDMNET_API_PUBLIC_HEADERS
-  ${RDMNET_INCLUDE}/rdmnet/client.h
   ${RDMNET_INCLUDE}/rdmnet/controller.h
   ${RDMNET_INCLUDE}/rdmnet/defs.h
   ${RDMNET_INCLUDE}/rdmnet/device.h
+  ${RDMNET_INCLUDE}/rdmnet/ept_client.h
+  ${RDMNET_INCLUDE}/rdmnet/llrp_manager.h
   ${RDMNET_INCLUDE}/rdmnet/version.h
 )
 set(RDMNET_API_PRIVATE_HEADERS
-  ${RDMNET_SRC}/rdmnet/private/client.h
   ${RDMNET_SRC}/rdmnet/private/controller.h
   ${RDMNET_SRC}/rdmnet/private/device.h
+  ${RDMNET_SRC}/rdmnet/private/llrp_manager.h
 )
 set(RDMNET_API_SOURCES
-  ${RDMNET_SRC}/rdmnet/client.c
   ${RDMNET_SRC}/rdmnet/controller.c
   ${RDMNET_SRC}/rdmnet/device.c
+  ${RDMNET_SRC}/rdmnet/llrp_manager.c
 )
 
 # The "RDMnet Core" layer: Lower-level logic shared by the Client APIs and the Broker library.
@@ -29,10 +30,10 @@ set(RDMNET_API_SOURCES
 set(RDMNET_CORE_PUBLIC_HEADERS
   ${RDMNET_INCLUDE}/rdmnet/core.h
   ${RDMNET_INCLUDE}/rdmnet/core/broker_prot.h
+  ${RDMNET_INCLUDE}/rdmnet/core/client.h
   ${RDMNET_INCLUDE}/rdmnet/core/connection.h
   ${RDMNET_INCLUDE}/rdmnet/core/ept_prot.h
   ${RDMNET_INCLUDE}/rdmnet/core/llrp.h
-  ${RDMNET_INCLUDE}/rdmnet/core/llrp_manager.h
   ${RDMNET_INCLUDE}/rdmnet/core/llrp_target.h
   ${RDMNET_INCLUDE}/rdmnet/core/message.h
   ${RDMNET_INCLUDE}/rdmnet/core/rpt_prot.h
@@ -40,10 +41,10 @@ set(RDMNET_CORE_PUBLIC_HEADERS
 )
 set(RDMNET_CORE_PRIVATE_HEADERS
   ${RDMNET_SRC}/rdmnet/private/broker_prot.h
+  ${RDMNET_SRC}/rdmnet/private/client.h
   ${RDMNET_SRC}/rdmnet/private/core.h
   ${RDMNET_SRC}/rdmnet/private/connection.h
   ${RDMNET_SRC}/rdmnet/private/llrp.h
-  ${RDMNET_SRC}/rdmnet/private/llrp_manager.h
   ${RDMNET_SRC}/rdmnet/private/llrp_prot.h
   ${RDMNET_SRC}/rdmnet/private/llrp_target.h
   ${RDMNET_SRC}/rdmnet/private/mcast.h
@@ -56,10 +57,10 @@ set(RDMNET_CORE_PRIVATE_HEADERS
 set(RDMNET_CORE_SOURCES
   ${RDMNET_SRC}/rdmnet/core.c
   ${RDMNET_SRC}/rdmnet/core/broker_prot.c
+  ${RDMNET_SRC}/rdmnet/core/client.c
   ${RDMNET_SRC}/rdmnet/core/client_entry.c
   ${RDMNET_SRC}/rdmnet/core/connection.c
   ${RDMNET_SRC}/rdmnet/core/llrp.c
-  ${RDMNET_SRC}/rdmnet/core/llrp_manager.c
   ${RDMNET_SRC}/rdmnet/core/llrp_prot.c
   ${RDMNET_SRC}/rdmnet/core/llrp_target.c
   ${RDMNET_SRC}/rdmnet/core/mcast.c

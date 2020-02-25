@@ -30,7 +30,7 @@
 #include "etcpal/cpp/lock.h"
 #include "etcpal/cpp/thread.h"
 #include "rdmnet/version.h"
-#include "rdmnet/client.h"
+#include "rdmnet/device.h"
 
 #define DEFAULT_DEVICE_LABEL "My ETC RDMnet Gateway"
 #define SOFTWARE_VERSION_LABEL RDMNET_VERSION_STRING

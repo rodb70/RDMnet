@@ -135,12 +135,6 @@ public:
   const DeviceData& data() const;
   Scope scope() const;
 
-  static etcpal::Error Init(const EtcPalLogParams* log_params = nullptr,
-                            const std::vector<RdmnetMcastNetintId>& mcast_netints = std::vector<RdmnetMcastNetintId>{});
-  static etcpal::Error Init(const etcpal::Logger& logger,
-                            const std::vector<RdmnetMcastNetintId>& mcast_netints = std::vector<RdmnetMcastNetintId>{});
-  static void Deinit();
-
 private:
   DeviceHandle handle_{RDMNET_DEVICE_INVALID};
   DeviceData my_data_;

@@ -17,7 +17,7 @@
  * https://github.com/ETCLabs/RDMnet
  *****************************************************************************/
 
-#include "rdmnet/client.h"
+#include "rdmnet/core/client.h"
 
 #include <inttypes.h>
 #include <stdint.h>
@@ -80,9 +80,6 @@
 
 #endif
 
-#define RDMNET_CLIENT_LOCK() etcpal_mutex_lock(&client_lock)
-#define RDMNET_CLIENT_UNLOCK() etcpal_mutex_unlock(&client_lock)
-
 #define INIT_CALLBACK_INFO(cbptr) ((cbptr)->which = kClientCallbackNone)
 
 /**************************** Private variables ******************************/
@@ -94,9 +91,6 @@ ETCPAL_MEMPOOL_DEFINE(client_rb_nodes, EtcPalRbNode, MAX_CLIENT_RB_NODES);
 
 static RdmResponse client_rdm_response_buf[RDMNET_MAX_RECEIVED_ACK_OVERFLOW_RESPONSES];
 #endif
-
-static bool client_lock_initted = false;
-static etcpal_mutex_t client_lock;
 
 static struct RdmnetClientState
 {
@@ -204,52 +198,23 @@ static void client_node_free(EtcPalRbNode* node);
 
 etcpal_error_t rdmnet_client_init(const EtcPalLogParams* lparams, const RdmnetNetintConfig* netint_config)
 {
-  // The lock is created only on the first call to this function.
-  if (!client_lock_initted)
-  {
-    if (etcpal_mutex_create(&client_lock))
-      client_lock_initted = true;
-    else
-      return kEtcPalErrSys;
-  }
-
-  if (rdmnet_core_initialized())
-  {
-    // Already initted
-    return kEtcPalErrOk;
-  }
-
-  etcpal_error_t res = kEtcPalErrSys;
-  if (RDMNET_CLIENT_LOCK())
-  {
-    res = rdmnet_core_init(lparams, netint_config);
+  etcpal_error_t res = kEtcPalErrOk;
 
 #if !RDMNET_DYNAMIC_MEM
-    if (res == kEtcPalErrOk)
-    {
-      res |= etcpal_mempool_init(rdmnet_clients);
-      res |= etcpal_mempool_init(client_scopes);
-      res |= etcpal_mempool_init(client_rb_nodes);
-    }
-
-    if (res != kEtcPalErrOk)
-    {
-      rdmnet_core_deinit();
-    }
+  res |= etcpal_mempool_init(rdmnet_clients);
+  res |= etcpal_mempool_init(client_scopes);
+  res |= etcpal_mempool_init(client_rb_nodes);
 #endif
 
-    if (res == kEtcPalErrOk)
-    {
-      etcpal_rbtree_init(&state.clients, client_compare, client_node_alloc, client_node_free);
-      etcpal_rbtree_init(&state.clients_by_llrp_handle, client_llrp_handle_compare, client_node_alloc,
-                         client_node_free);
+  if (res == kEtcPalErrOk)
+  {
+    etcpal_rbtree_init(&state.clients, client_compare, client_node_alloc, client_node_free);
+    etcpal_rbtree_init(&state.clients_by_llrp_handle, client_llrp_handle_compare, client_node_alloc, client_node_free);
 
-      etcpal_rbtree_init(&state.scopes_by_handle, scope_compare, client_node_alloc, client_node_free);
-      etcpal_rbtree_init(&state.scopes_by_disc_handle, scope_disc_handle_compare, client_node_alloc, client_node_free);
+    etcpal_rbtree_init(&state.scopes_by_handle, scope_compare, client_node_alloc, client_node_free);
+    etcpal_rbtree_init(&state.scopes_by_disc_handle, scope_disc_handle_compare, client_node_alloc, client_node_free);
 
-      init_int_handle_manager(&state.handle_mgr, client_handle_in_use);
-    }
-    RDMNET_CLIENT_UNLOCK();
+    init_int_handle_manager(&state.handle_mgr, client_handle_in_use);
   }
   return res;
 }
@@ -266,29 +231,21 @@ static void client_dealloc(const EtcPalRbTree* self, EtcPalRbNode* node)
 
 void rdmnet_client_deinit()
 {
-  if (!rdmnet_core_initialized())
-    return;
-
-  if (RDMNET_CLIENT_LOCK())
-  {
-    etcpal_rbtree_clear_with_cb(&state.clients, client_dealloc);
-
-    rdmnet_core_deinit();
-    RDMNET_CLIENT_UNLOCK();
-  }
+  etcpal_rbtree_clear_with_cb(&state.clients, client_dealloc);
 }
 
 /*!
- * \brief Initialize an RPT Client Config with default values for the optional config options.
+ * \brief Initialize an RPT Client Config struct to default values.
  *
- * The config struct members not marked 'optional' are not meaningfully initialized by this
- * function. Those members do not have default values and must be initialized manually before
- * passing the config struct to an API function.
+ * The config struct members not marked 'optional' are initialized to invalid values by this
+ * function. Those members must be set manually with meaningful data before passing the config
+ * struct to an API function.
  *
  * Usage example:
  * \code
  * RdmnetRptClientConfig config;
- * rdmnet_rpt_client_config_init(&config, 0x6574);
+ * rdmnet_rpt_client_config_init(&config, MY_ESTA_MANUFACTURER_ID_VAL);
+ * // Now fill in the required values...
  * \endcode
  *
  * \param[out] config RdmnetRptClientConfig to initialize.
@@ -299,50 +256,125 @@ void rdmnet_rpt_client_config_init(RdmnetRptClientConfig* config, uint16_t manuf
   if (config)
   {
     memset(config, 0, sizeof(RdmnetRptClientConfig));
-    RPT_CLIENT_INIT_OPTIONAL_CONFIG_VALUES(&config->optional, manufacturer_id);
+    RDMNET_INIT_DYNAMIC_UID_REQUEST(&config->uid, manufacturer_id);
   }
 }
 
+/*!
+ * \brief Initialize an EPT Client Config struct to default values.
+ *
+ * The config struct members not marked 'optional' are initialized to invalid values by this
+ * function. Those members must be set manually with meaningful data before passing the config
+ * struct to an API function.
+ *
+ * Usage example:
+ * \code
+ * RdmnetEptClientConfig config;
+ * rdmnet_ept_client_config_init(&config);
+ * // Now fill in the required values...
+ * \endcode
+ *
+ * \param[out] config RdmnetEptClientConfig to initialize.
+ */
+void rdmnet_ept_client_config_init(RdmnetEptClientConfig* config)
+{
+  if (config)
+  {
+    memset(config, 0, sizeof(RdmnetEptClientConfig));
+  }
+}
+
+/*!
+ * \brief Create a new RPT client from the given configuration.
+ *
+ * The RPT client will be created with no scopes; nothing will happen until you add a scope using
+ * rdmnet_client_add_scope().
+ *
+ * \param[in] config Configuration parameters for the RPT client to be created.
+ * \param[out] handle Filled in on success with a handle to the RPT client.
+ * \return #kEtcPalErrOk: RPT Client created successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNoMem: No memory to allocate new client instance.
+ * \return #kEtcPalErrSys: An internal library or system call error occurred.
+ */
 etcpal_error_t rdmnet_rpt_client_create(const RdmnetRptClientConfig* config, rdmnet_client_t* handle)
 {
-  if (!config || !handle)
-    return kEtcPalErrInvalid;
-  if (!rdmnet_core_initialized())
-    return kEtcPalErrNotInit;
-
-  etcpal_error_t res = validate_rpt_client_config(config);
-  if (res != kEtcPalErrOk)
-    return res;
-
-  if (RDMNET_CLIENT_LOCK())
-  {
-    res = new_rpt_client(config, handle);
-    RDMNET_CLIENT_UNLOCK();
-  }
-  else
-  {
-    res = kEtcPalErrSys;
-  }
-
-  return res;
+  ETCPAL_UNUSED_ARG(config);
+  ETCPAL_UNUSED_ARG(handle);
+  return kEtcPalErrNotImpl;
+  //  if (!config || !handle)
+  //    return kEtcPalErrInvalid;
+  //  if (!rdmnet_core_initialized())
+  //    return kEtcPalErrNotInit;
+  //
+  //  etcpal_error_t res = validate_rpt_client_config(config);
+  //  if (res != kEtcPalErrOk)
+  //    return res;
+  //
+  //  if (RDMNET_CLIENT_LOCK())
+  //  {
+  //    res = new_rpt_client(config, handle);
+  //    RDMNET_CLIENT_UNLOCK();
+  //  }
+  //  else
+  //  {
+  //    res = kEtcPalErrSys;
+  //  }
+  //
+  //  return res;
 }
 
-etcpal_error_t rdmnet_client_destroy(rdmnet_client_t handle, rdmnet_disconnect_reason_t reason)
+/*!
+ * \brief Destroy an RDMnet client instance.
+ *
+ * Will disconnect from all brokers to which this client is currently connected, sending the
+ * disconnect reason provided in the disconnect_reason parameter.
+ *
+ * \param[in] handle Handle to client to destroy, no longer valid after this function returns.
+ * \param[in] disconnect_reason Disconnect reason code to send on all connected scopes.
+ * \return #kEtcPalErrOk: Client destroyed successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNotFound: Handle is not associated with a valid client instance.
+ * \return #kEtcPalErrSys: An internal library or system call error occurred.
+ */
+etcpal_error_t rdmnet_client_destroy(rdmnet_client_t handle, rdmnet_disconnect_reason_t disconnect_reason)
 {
-  if (!rdmnet_core_initialized())
-    return kEtcPalErrNotInit;
-
-  RdmnetClient* cli;
-  etcpal_error_t res = get_client(handle, &cli);
-  if (res != kEtcPalErrOk)
-    return res;
-
-  etcpal_rbtree_remove(&state.clients, cli);
-  destroy_client(cli, reason);
-  RDMNET_CLIENT_UNLOCK();
-  return res;
+  ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(disconnect_reason);
+  return kEtcPalErrNotImpl;
+  //  if (!rdmnet_core_initialized())
+  //    return kEtcPalErrNotInit;
+  //
+  //  RdmnetClient* cli;
+  //  etcpal_error_t res = get_client(handle, &cli);
+  //  if (res != kEtcPalErrOk)
+  //    return res;
+  //
+  //  etcpal_rbtree_remove(&state.clients, cli);
+  //  destroy_client(cli, reason);
+  //  RDMNET_CLIENT_UNLOCK();
+  //  return res;
 }
 
+/*!
+ * \brief Add a new scope to a client instance.
+ *
+ * The library will attempt to discover and connect to a broker for the scope (or just connect if a
+ * static broker address is given); the status of these attempts will be communicated via the
+ * callbacks associated with the client instance.
+ *
+ * \param[in] handle Handle to client to which to add a new scope.
+ * \param[in] scope_config Configuration parameters for the new scope.
+ * \param[out] scope_handle Filled in on success with a handle to the new scope.
+ * \return #kEtcPalErrOk: New scope added successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNotFound: Handle is not associated with a valid client instance.
+ * \return #kEtcPalErrNoMem: No memory to allocate new scope.
+ * \return #kEtcPalErrSys: An internal library or system call error occurred.
+ */
 etcpal_error_t rdmnet_client_add_scope(rdmnet_client_t handle, const RdmnetScopeConfig* scope_config,
                                        rdmnet_client_scope_t* scope_handle)
 {
@@ -380,6 +412,21 @@ etcpal_error_t rdmnet_client_add_scope(rdmnet_client_t handle, const RdmnetScope
   return res;
 }
 
+/*!
+ * \brief Remove a previously-added scope from a client instance.
+ *
+ * After this call completes, scope_handle will no longer be valid.
+ *
+ * \param[in] handle Handle to the client from which to remove a scope.
+ * \param[in] scope_handle Handle to scope to remove.
+ * \param[in] disconnect_reason RDMnet protocol disconnect reason to send to the connected broker.
+ * \return #kEtcPalErrOk: Scope removed successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNotFound: Handle is not associated with a valid client instance, or
+ *                              scope_handle is not associated with a valid scope instance.
+ * \return #kEtcPalErrSys: An internal library or system call error occurred.
+ */
 etcpal_error_t rdmnet_client_remove_scope(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
                                           rdmnet_disconnect_reason_t reason)
 {
@@ -576,7 +623,7 @@ etcpal_error_t rdmnet_rpt_client_send_llrp_response(rdmnet_client_t handle, cons
   if (res != kEtcPalErrOk)
     return res;
 
-  res = rdmnet_llrp_send_rdm_response(cli->llrp_handle, resp);
+  res = llrp_target_send_rdm_response(cli->llrp_handle, resp);
 
   release_client(cli);
   return res;
@@ -978,103 +1025,104 @@ void fill_callback_info(const RdmnetClient* client, ClientCallbackDispatchInfo* 
 
 void deliver_callback(ClientCallbackDispatchInfo* info)
 {
-  if (info->type == kClientProtocolRPT)
-  {
-    RptCallbackDispatchInfo* rpt_info = &info->prot_info.rpt;
-    switch (info->which)
-    {
-      case kClientCallbackConnected:
-        if (rpt_info->cbs.connected)
-        {
-          rpt_info->cbs.connected(info->handle, info->common_args.connected.scope_handle,
-                                  &info->common_args.connected.info, info->context);
-        }
-        break;
-      case kClientCallbackConnectFailed:
-        if (rpt_info->cbs.connect_failed)
-        {
-          rpt_info->cbs.connect_failed(info->handle, info->common_args.connect_failed.scope_handle,
-                                       &info->common_args.connect_failed.info, info->context);
-        }
-        break;
-      case kClientCallbackDisconnected:
-        if (rpt_info->cbs.disconnected)
-        {
-          rpt_info->cbs.disconnected(info->handle, info->common_args.disconnected.scope_handle,
-                                     &info->common_args.disconnected.info, info->context);
-        }
-        break;
-      case kClientCallbackBrokerMsgReceived:
-        if (rpt_info->cbs.broker_msg_received)
-        {
-          rpt_info->cbs.broker_msg_received(info->handle, info->common_args.broker_msg_received.scope_handle,
-                                            info->common_args.broker_msg_received.msg, info->context);
-        }
-        break;
-      case kClientCallbackLlrpMsgReceived:
-        if (rpt_info->cbs.llrp_msg_received)
-        {
-          rpt_info->cbs.llrp_msg_received(info->handle, rpt_info->args.llrp_msg_received.cmd, info->context);
-        }
-      case kClientCallbackMsgReceived:
-        if (rpt_info->cbs.msg_received)
-        {
-          rpt_info->cbs.msg_received(info->handle, rpt_info->args.msg_received.scope_handle,
-                                     &rpt_info->args.msg_received.msg, info->context);
-        }
-        free_rpt_client_message(&rpt_info->args.msg_received.msg);
-        break;
-      case kClientCallbackNone:
-      default:
-        break;
-    }
-  }
-  else if (info->type == kClientProtocolEPT)
-  {
-    EptCallbackDispatchInfo* ept_info = &info->prot_info.ept;
-    switch (info->which)
-    {
-      case kClientCallbackConnected:
-        if (ept_info->cbs.connected)
-        {
-          ept_info->cbs.connected(info->handle, info->common_args.connected.scope_handle,
-                                  &info->common_args.connected.info, info->context);
-        }
-        break;
-      case kClientCallbackConnectFailed:
-        if (ept_info->cbs.connect_failed)
-        {
-          ept_info->cbs.connect_failed(info->handle, info->common_args.connect_failed.scope_handle,
-                                       &info->common_args.connect_failed.info, info->context);
-        }
-        break;
-      case kClientCallbackDisconnected:
-        if (ept_info->cbs.disconnected)
-        {
-          ept_info->cbs.disconnected(info->handle, info->common_args.disconnected.scope_handle,
-                                     &info->common_args.disconnected.info, info->context);
-        }
-        break;
-      case kClientCallbackBrokerMsgReceived:
-        if (ept_info->cbs.broker_msg_received)
-        {
-          ept_info->cbs.broker_msg_received(info->handle, info->common_args.broker_msg_received.scope_handle,
-                                            info->common_args.broker_msg_received.msg, info->context);
-        }
-        break;
-      case kClientCallbackMsgReceived:
-        if (ept_info->cbs.msg_received)
-        {
-          ept_info->cbs.msg_received(info->handle, ept_info->msg_received.scope_handle, &ept_info->msg_received.msg,
-                                     info->context);
-        }
-        free_ept_client_message(&ept_info->msg_received.msg);
-        break;
-      case kClientCallbackNone:
-      default:
-        break;
-    }
-  }
+  ETCPAL_UNUSED_ARG(info);
+  //  if (info->type == kClientProtocolRPT)
+  //  {
+  //    RptCallbackDispatchInfo* rpt_info = &info->prot_info.rpt;
+  //    switch (info->which)
+  //    {
+  //      case kClientCallbackConnected:
+  //        if (rpt_info->cbs.connected)
+  //        {
+  //          rpt_info->cbs.connected(info->handle, info->common_args.connected.scope_handle,
+  //                                  &info->common_args.connected.info, info->context);
+  //        }
+  //        break;
+  //      case kClientCallbackConnectFailed:
+  //        if (rpt_info->cbs.connect_failed)
+  //        {
+  //          rpt_info->cbs.connect_failed(info->handle, info->common_args.connect_failed.scope_handle,
+  //                                       &info->common_args.connect_failed.info, info->context);
+  //        }
+  //        break;
+  //      case kClientCallbackDisconnected:
+  //        if (rpt_info->cbs.disconnected)
+  //        {
+  //          rpt_info->cbs.disconnected(info->handle, info->common_args.disconnected.scope_handle,
+  //                                     &info->common_args.disconnected.info, info->context);
+  //        }
+  //        break;
+  //      case kClientCallbackBrokerMsgReceived:
+  //        if (rpt_info->cbs.broker_msg_received)
+  //        {
+  //          rpt_info->cbs.broker_msg_received(info->handle, info->common_args.broker_msg_received.scope_handle,
+  //                                            info->common_args.broker_msg_received.msg, info->context);
+  //        }
+  //        break;
+  //      case kClientCallbackLlrpMsgReceived:
+  //        if (rpt_info->cbs.llrp_msg_received)
+  //        {
+  //          rpt_info->cbs.llrp_msg_received(info->handle, rpt_info->args.llrp_msg_received.cmd, info->context);
+  //        }
+  //      case kClientCallbackMsgReceived:
+  //        if (rpt_info->cbs.msg_received)
+  //        {
+  //          rpt_info->cbs.msg_received(info->handle, rpt_info->args.msg_received.scope_handle,
+  //                                     &rpt_info->args.msg_received.msg, info->context);
+  //        }
+  //        free_rpt_client_message(&rpt_info->args.msg_received.msg);
+  //        break;
+  //      case kClientCallbackNone:
+  //      default:
+  //        break;
+  //    }
+  //  }
+  //  else if (info->type == kClientProtocolEPT)
+  //  {
+  //    EptCallbackDispatchInfo* ept_info = &info->prot_info.ept;
+  //    switch (info->which)
+  //    {
+  //      case kClientCallbackConnected:
+  //        if (ept_info->cbs.connected)
+  //        {
+  //          ept_info->cbs.connected(info->handle, info->common_args.connected.scope_handle,
+  //                                  &info->common_args.connected.info, info->context);
+  //        }
+  //        break;
+  //      case kClientCallbackConnectFailed:
+  //        if (ept_info->cbs.connect_failed)
+  //        {
+  //          ept_info->cbs.connect_failed(info->handle, info->common_args.connect_failed.scope_handle,
+  //                                       &info->common_args.connect_failed.info, info->context);
+  //        }
+  //        break;
+  //      case kClientCallbackDisconnected:
+  //        if (ept_info->cbs.disconnected)
+  //        {
+  //          ept_info->cbs.disconnected(info->handle, info->common_args.disconnected.scope_handle,
+  //                                     &info->common_args.disconnected.info, info->context);
+  //        }
+  //        break;
+  //      case kClientCallbackBrokerMsgReceived:
+  //        if (ept_info->cbs.broker_msg_received)
+  //        {
+  //          ept_info->cbs.broker_msg_received(info->handle, info->common_args.broker_msg_received.scope_handle,
+  //                                            info->common_args.broker_msg_received.msg, info->context);
+  //        }
+  //        break;
+  //      case kClientCallbackMsgReceived:
+  //        if (ept_info->cbs.msg_received)
+  //        {
+  //          ept_info->cbs.msg_received(info->handle, ept_info->msg_received.scope_handle, &ept_info->msg_received.msg,
+  //                                     info->context);
+  //        }
+  //        free_ept_client_message(&ept_info->msg_received.msg);
+  //        break;
+  //      case kClientCallbackNone:
+  //      default:
+  //        break;
+  //    }
+  //  }
 }
 
 bool connect_failed_will_retry(rdmnet_connect_fail_event_t event, rdmnet_connect_status_t status)
@@ -1186,7 +1234,7 @@ void destroy_client(RdmnetClient* cli, rdmnet_disconnect_reason_t reason)
     scope = next_scope;
   }
 
-  rdmnet_llrp_target_destroy(cli->llrp_handle);
+  llrp_target_destroy(cli->llrp_handle);
 
   FREE_RDMNET_CLIENT(cli);
 }
@@ -1203,13 +1251,13 @@ etcpal_error_t create_llrp_handle_for_client(const RdmnetRptClientConfig* config
       (config->type == kRPTClientTypeController ? kLlrpCompRptController : kLlrpCompRptDevice);
   target_config.callbacks = llrp_callbacks;
   target_config.callback_context = NULL;
-  etcpal_error_t res = rdmnet_llrp_target_create(&target_config, &cli->llrp_handle);
+  etcpal_error_t res = llrp_target_create(&target_config, &cli->llrp_handle);
 
   if (res == kEtcPalErrOk)
   {
     if (kEtcPalErrOk != etcpal_rbtree_insert(&state.clients_by_llrp_handle, cli))
     {
-      rdmnet_llrp_target_destroy(cli->llrp_handle);
+      llrp_target_destroy(cli->llrp_handle);
       res = kEtcPalErrNoMem;
     }
   }
