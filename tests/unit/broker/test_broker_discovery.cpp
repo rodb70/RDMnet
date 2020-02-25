@@ -20,10 +20,11 @@
 #include "broker_discovery.h"
 
 #include <cstring>
-#include "gmock/gmock.h"
+#include "etcpal/common.h"
 #include "rdmnet/core/util.h"
 #include "rdmnet_mock/core/discovery.h"
 #include "test_operators.h"
+#include "gmock/gmock.h"
 
 extern "C" {
 etcpal_error_t rdmnet_disc_register_broker_and_set_handle(const RdmnetBrokerRegisterConfig* config,
@@ -99,7 +100,7 @@ TestBrokerDiscovery* TestBrokerDiscovery::instance = nullptr;
 extern "C" etcpal_error_t rdmnet_disc_register_broker_and_set_handle(const RdmnetBrokerRegisterConfig* config,
                                                                      rdmnet_registered_broker_t* handle)
 {
-  RDMNET_UNUSED_ARG(config);
+  ETCPAL_UNUSED_ARG(config);
 
   TestBrokerDiscovery* test = TestBrokerDiscovery::instance;
 

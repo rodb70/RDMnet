@@ -183,8 +183,8 @@ typedef struct ClientCallbackDispatchInfo
   } common_args;
 } ClientCallbackDispatchInfo;
 
-etcpal_error_t rdmnet_client_init(const EtcPalLogParams* lparams, const RdmnetNetintConfig* netint_config);
-void rdmnet_client_deinit();
+etcpal_error_t rdmnet_client_init(void);
+void rdmnet_client_deinit(void);
 
 #ifdef __cplusplus
 }

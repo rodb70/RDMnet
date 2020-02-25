@@ -120,18 +120,32 @@ typedef struct RdmnetClientDisconnectedInfo
   bool will_retry;
 } RdmnetClientDisconnectedInfo;
 
+/*!
+ * Enumeration representing an action to take after an "RDM command received" callback completes.
+ */
 typedef enum
 {
+  /*! Send an RDM ACK to the originating controller. */
   kRdmnetResponseActionSendAck,
+  /*! Send an RDM NACK with reason to the originating controller. */
   kRdmnetResponseActionSendNack,
+  /*! Send an RPT status message with code to the originating controller. */
   kRdmnetResponseActionSendStatus,
+  /*! Defer the response to be sent later. Be sure to save the command. */
   kRdmnetResponseActionDefer
 } rdmnet_response_action_t;
 
+/*!
+ * Enumeration representing an action to take after an "LLRP RDM command received" callback
+ * completes.
+ */
 typedef enum
 {
+  /*! Send an RDM ACK to the originating LLRP manager. */
   kLlrpResponseActionSendAck,
+  /*! Send an RDM NACK with reason to the originating LLRP manager. */
   kLlrpResponseActionSendNack,
+  /*! Defer the response to be sent later. Be sure to save the command. */
   kLlrpResponseActionDefer
 } llrp_response_action_t;
 
@@ -209,11 +223,11 @@ typedef void (*RdmnetClientBrokerMsgReceivedCb)(rdmnet_client_t handle, rdmnet_c
  *
  * \param[in] handle Handle to client which has received an LLRP message.
  * \param[in] cmd The LLRP RDM command.
+ * \param[in] response A response object to be used for responding synchronously.
  * \param[in] context Context pointer that was given at the creation of the client.
  */
-typedef rdmnet_response_action_t (*RdmnetClientLlrpMsgReceivedCb)(rdmnet_client_t handle,
-                                                                  const LlrpRemoteRdmCommand* cmd,
-                                                                  LlrpSyncRdmResponse* response, void* context);
+typedef llrp_response_action_t (*RdmnetClientLlrpMsgReceivedCb)(rdmnet_client_t handle, const LlrpRemoteRdmCommand* cmd,
+                                                                LlrpSyncRdmResponse* response, void* context);
 
 /*!
  * \brief An RPT message was received on an RPT client connection.
@@ -272,8 +286,10 @@ typedef struct EptClientCallbacks
   EptClientMsgReceivedCb msg_received;
 } EptClientCallbacks;
 
-/*! A set of configuration information for a single scope in which an RDMnet client is
- *  participating. */
+/*!
+ * A set of configuration information for a single scope in which an RDMnet client is
+ * participating.
+ */
 typedef struct RdmnetScopeConfig
 {
   /*!
@@ -290,15 +306,6 @@ typedef struct RdmnetScopeConfig
   /*! The broker address to which to connect, if a static broker has been configured. */
   EtcPalSockAddr static_broker_addr;
 } RdmnetScopeConfig;
-
-#define RPT_CLIENT_INIT_OPTIONAL_CONFIG_VALUES(optionalcfgptr, manu_id) \
-  do                                                                    \
-  {                                                                     \
-    RDMNET_INIT_DYNAMIC_UID_REQUEST(&(optionalcfgptr)->uid, (manu_id)); \
-    (optionalcfgptr)->search_domain = E133_DEFAULT_DOMAIN;              \
-    (optionalcfgptr)->llrp_netint_arr = NULL;                           \
-    (optionalcfgptr)->num_llrp_netints = 0;                             \
-  } while (0)
 
 /*! A set of information that defines the startup parameters of an RPT RDMnet Client. */
 typedef struct RdmnetRptClientConfig
@@ -345,10 +352,10 @@ typedef struct RdmnetRptClientConfig
  *
  * \param manu_id Your ESTA manufacturer ID.
  */
-#define RDMNET_RPT_CLIENT_CONFIG_DEFAULT_INIT(manu_id)                                                                 \
-  {                                                                                                                    \
-    kRPTClientTypeUnknown, kEtcPalNullUuid, {NULL, NULL, NULL, NULL, NULL, NULL}, NULL, {0x8000u | manu_val, 0}, NULL, \
-        NULL, 0                                                                                                        \
+#define RDMNET_RPT_CLIENT_CONFIG_DEFAULT_INIT(manu_id)                                                           \
+  {                                                                                                              \
+    kRPTClientTypeUnknown, kEtcPalNullUuid, {NULL, NULL, NULL, NULL, NULL, NULL}, NULL, {0x8000u | manu_val, 0}, \
+        E133_DEFAULT_DOMAIN, NULL, 0                                                                             \
   }
 
 /*! A set of information that defines the startup parameters of an EPT RDMnet Client. */
@@ -458,17 +465,22 @@ etcpal_error_t rdmnet_client_add_scope(rdmnet_client_t handle, const RdmnetScope
                                        rdmnet_client_scope_t* scope_handle);
 etcpal_error_t rdmnet_client_remove_scope(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
                                           rdmnet_disconnect_reason_t reason);
-etcpal_error_t rdmnet_client_get_scope(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
-                                       RdmnetScopeConfig* scope_config);
+etcpal_error_t rdmnet_client_get_scope_string(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
+                                              char* scope_str_buf);
+etcpal_error_t rdmnet_client_get_static_broker_config(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
+                                                      bool* has_static_broker_addr, EtcPalSockAddr* static_broker_addr);
 
+etcpal_error_t rdmnet_client_change_scope(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
+                                          const RdmnetScopeConfig* new_scope_config,
+                                          rdmnet_disconnect_reason_t disconnect_reason);
 etcpal_error_t rdmnet_client_change_search_domain(rdmnet_client_t handle, const char* new_search_domain,
                                                   rdmnet_disconnect_reason_t reason);
 
 etcpal_error_t rdmnet_client_request_client_list(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle);
 etcpal_error_t rdmnet_client_request_dynamic_uids(rdmnet_conn_t handle, rdmnet_client_scope_t scope_handle,
                                                   const BrokerDynamicUidRequest* requests, size_t num_requests);
-etcpal_error_t rdmnet_client_request_uid_assignment_list(rdmnet_conn_t handle, rdmnet_client_scope_t scope_handle,
-                                                         const RdmUid* uids, size_t num_uids);
+etcpal_error_t rdmnet_client_request_dynamic_uid_mappings(rdmnet_conn_t handle, rdmnet_client_scope_t scope_handle,
+                                                          const RdmUid* uids, size_t num_uids);
 
 etcpal_error_t rdmnet_rpt_client_send_rdm_command(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
                                                   const RdmnetLocalRdmCommand* cmd, uint32_t* seq_num);

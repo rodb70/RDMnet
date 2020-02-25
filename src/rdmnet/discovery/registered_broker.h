@@ -58,7 +58,7 @@ bool broker_register_ref_is_valid(const RdmnetBrokerRegisterRef* ref);
 void registered_broker_for_each(void (*for_each_func)(RdmnetBrokerRegisterRef*));
 void registered_broker_remove(const RdmnetBrokerRegisterRef* ref);
 void registered_broker_delete(RdmnetBrokerRegisterRef* rb);
-void registered_broker_delete_all();
+void registered_broker_delete_all(void);
 
 #ifdef __cplusplus
 }

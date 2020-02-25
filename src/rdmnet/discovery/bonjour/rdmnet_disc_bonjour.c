@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "etcpal/common.h"
 #include "etcpal/inet.h"
 #include "etcpal/pack.h"
 #include "rdmnet/core/util.h"
@@ -64,7 +65,7 @@ static void txt_record_to_broker_info(const unsigned char* txt, uint16_t txt_len
 void DNSSD_API HandleDNSServiceRegisterReply(DNSServiceRef sdRef, DNSServiceFlags flags, DNSServiceErrorType errorCode,
                                              const char* name, const char* regtype, const char* domain, void* context)
 {
-  RDMNET_UNUSED_ARG(sdRef);
+  ETCPAL_UNUSED_ARG(sdRef);
 
   RdmnetBrokerRegisterRef* ref = (RdmnetBrokerRegisterRef*)context;
   RDMNET_ASSERT(ref);
@@ -97,9 +98,9 @@ void DNSSD_API HandleDNSServiceGetAddrInfoReply(DNSServiceRef sdRef, DNSServiceF
                                                 DNSServiceErrorType errorCode, const char* hostname,
                                                 const struct sockaddr* address, uint32_t ttl, void* context)
 {
-  RDMNET_UNUSED_ARG(interfaceIndex);
-  RDMNET_UNUSED_ARG(hostname);
-  RDMNET_UNUSED_ARG(ttl);
+  ETCPAL_UNUSED_ARG(interfaceIndex);
+  ETCPAL_UNUSED_ARG(hostname);
+  ETCPAL_UNUSED_ARG(ttl);
 
   RdmnetScopeMonitorRef* ref = (RdmnetScopeMonitorRef*)context;
   RDMNET_ASSERT(ref);
@@ -162,9 +163,9 @@ void DNSSD_API HandleDNSServiceResolveReply(DNSServiceRef sdRef, DNSServiceFlags
                                             uint16_t port /* In network byte order */, uint16_t txtLen,
                                             const unsigned char* txtRecord, void* context)
 {
-  RDMNET_UNUSED_ARG(flags);
-  RDMNET_UNUSED_ARG(interfaceIndex);
-  RDMNET_UNUSED_ARG(fullname);
+  ETCPAL_UNUSED_ARG(flags);
+  ETCPAL_UNUSED_ARG(interfaceIndex);
+  ETCPAL_UNUSED_ARG(fullname);
 
   RdmnetScopeMonitorRef* ref = (RdmnetScopeMonitorRef*)context;
   RDMNET_ASSERT(ref);
@@ -219,8 +220,8 @@ void DNSSD_API HandleDNSServiceBrowseReply(DNSServiceRef sdRef, DNSServiceFlags 
                                            DNSServiceErrorType errorCode, const char* serviceName, const char* regtype,
                                            const char* replyDomain, void* context)
 {
-  RDMNET_UNUSED_ARG(sdRef);
-  RDMNET_UNUSED_ARG(interfaceIndex);
+  ETCPAL_UNUSED_ARG(sdRef);
+  ETCPAL_UNUSED_ARG(interfaceIndex);
 
   RdmnetScopeMonitorRef* ref = (RdmnetScopeMonitorRef*)context;
   RDMNET_ASSERT(ref);
@@ -301,7 +302,7 @@ void DNSSD_API HandleDNSServiceBrowseReply(DNSServiceRef sdRef, DNSServiceFlags 
 etcpal_error_t rdmnet_disc_platform_init(const RdmnetNetintConfig* netint_config)
 {
   // TODO restrict network interfaces using netint_config
-  RDMNET_UNUSED_ARG(netint_config);
+  ETCPAL_UNUSED_ARG(netint_config);
   return etcpal_poll_context_init(&poll_context);
 }
 

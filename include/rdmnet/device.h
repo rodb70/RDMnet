@@ -115,38 +115,36 @@ typedef struct RdmnetDeviceConfig
 
   /*! The device's CID. */
   EtcPalUuid cid;
-  /*! The device's configured RDMnet scope. */
-  RdmnetScopeConfig scope_config;
   /*! A set of callbacks for the device to receive RDMnet notifications. */
   RdmnetDeviceCallbacks callbacks;
-  /*! Pointer to opaque data passed back with each callback. Can be NULL. */
-  void* callback_context;
 
   /**** Optional Values ****/
 
   uint8_t* response_buf;
   size_t response_buf_size;
 
+  /*! Pointer to opaque data passed back with each callback. Can be NULL. */
+  void* callback_context;
   /*!
-   * \brief OPTIONAL: The device's UID.
-   *
-   * This should only be filled in manually if the device is using a static UID. Otherwise,
-   * rdmnet_device_config_init() will initialize this field with a dynamic UID request generated
-   * from your ESTA manufacturer ID. All RDMnet components are required to have a valid ESTA
-   * manufacturer ID.
+   * The device's configured RDMnet scope. Will be initialized to the RDMnet default scope using
+   * the initialization functions/macros for this structure.
+   */
+  RdmnetScopeConfig scope_config;
+  /*!
+   * (optional) The device's UID. This will be intialized with a Dynamic UID request value using
+   * the initialization functions/macros for this structure. If you want a static UID instead, just
+   * fill this in with the static UID after initializing.
    */
   RdmUid uid;
-  /*! OPTIONAL: The client's configured search domain for discovery. */
+  /*! (optional) The client's configured search domain for discovery. */
   const char* search_domain;
   /*!
-   * \brief OPTIONAL: A set of network interfaces to use for the LLRP target associated with this
-   *        device.
-   *
+   * (optional) A set of network interfaces to use for the LLRP target associated with this device.
    * If NULL, the set passed to rdmnet_core_init() will be used, or all network interfaces on the
    * system if that was not provided.
    */
   RdmnetMcastNetintId* llrp_netint_arr;
-  /*! OPTIONAL: The size of llrp_netint_arr. */
+  /*! (optional) The size of llrp_netint_arr. */
   size_t num_llrp_netints;
 } RdmnetDeviceConfig;
 

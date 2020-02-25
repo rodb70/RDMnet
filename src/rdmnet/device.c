@@ -19,14 +19,16 @@
 
 #include "rdmnet/device.h"
 
+#include "etcpal/common.h"
+#include "rdmnet/private/core.h"
+#include "rdmnet/private/device.h"
 #include "rdmnet/private/opts.h"
+
 #if RDMNET_DYNAMIC_MEM
 #include <stdlib.h>
 #else
 #include "etcpal/mempool.h"
 #endif
-#include "rdmnet/private/core.h"
-#include "rdmnet/private/device.h"
 
 /***************************** Private macros ********************************/
 
@@ -107,7 +109,9 @@ void rdmnet_device_config_init(RdmnetDeviceConfig* config, uint16_t manufacturer
   if (config)
   {
     memset(config, 0, sizeof(RdmnetDeviceConfig));
-    RPT_CLIENT_INIT_OPTIONAL_CONFIG_VALUES(&config->optional, manufacturer_id);
+    RDMNET_CLIENT_SET_DEFAULT_SCOPE(&config->scope_config);
+    RDMNET_INIT_DYNAMIC_UID_REQUEST(&config->uid, manufacturer_id);
+    config->search_domain = E133_DEFAULT_DOMAIN;
   }
 }
 
@@ -192,33 +196,50 @@ etcpal_error_t rdmnet_device_destroy(rdmnet_device_t handle, rdmnet_disconnect_r
 }
 
 /*!
- * \brief Send an RDM response from a device.
+ * \brief Send an RDM ACK response from a device.
  *
- * The RdmnetLocalRdmResponse struct should be filled in using rdmnet_create_response_from_command() or
- * rdmnet_create_unsolicited_response(), which will ensure that the members are set properly.
- *
- * \param[in] handle Handle to the device from which to send the RDM response.
- * \param[in] resp Response to send.
- * \return #kEtcPalErrOk: Response sent successfully.
+ * \param[in] handle Handle to the device from which to send the RDM ACK response.
+ * \param[in] received_cmd Previously-received command that the ACK is a response to.
+ * \param[in] response_data Parameter data that goes with this ACK, or NULL if no data.
+ * \param[in] response_data_len Length in bytes of response_data, or 0 if no data.
+ * \return #kEtcPalErrOk: ACK response sent successfully.
  * \return #kEtcPalErrInvalid: Invalid argument.
- * \return Other errors forwarded from rdmnet_rpt_client_send_rdm_response().
+ * \return Other errors forwarded from rdmnet_rpt_client_send_rdm_ack().
  */
-etcpal_error_t rdmnet_device_send_rdm_response(rdmnet_device_t handle, const RdmnetLocalRdmResponse* resp)
+etcpal_error_t rdmnet_device_send_rdm_ack(rdmnet_device_t handle, const RdmnetRemoteRdmCommand* received_cmd,
+                                          const uint8_t* response_data, size_t response_data_len)
 {
   if (!handle)
     return kEtcPalErrInvalid;
 
-  return rdmnet_rpt_client_send_rdm_response(handle->client_handle, handle->scope_handle, resp);
+  return rdmnet_rpt_client_send_rdm_ack(handle->client_handle, handle->scope_handle, received_cmd, response_data,
+                                        response_data_len);
+}
+
+/*!
+ * \brief Send an RDM NACK response from a device.
+ *
+ * \param[in] handle Handle to the device from which to send the RDM NACK response.
+ * \param[in] received_cmd Previously-received command that the NACK is a response to.
+ * \param[in] nack_reason RDM NACK reason code to send with the NACK.
+ * \return #kEtcPalErrOk: NACK response sent successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument.
+ * \return Other errors forwarded from rdmnet_rpt_client_send_rdm_nack().
+ */
+etcpal_error_t rdmnet_device_send_rdm_nack(rdmnet_device_t handle, const RdmnetRemoteRdmCommand* received_cmd,
+                                           rdm_nack_reason_t nack_reason)
+{
+  if (!handle)
+    return kEtcPalErrInvalid;
+
+  return rdmnet_rpt_client_send_rdm_nack(handle->client_handle, handle->scope_handle, received_cmd, nack_reason);
 }
 
 /*!
  * \brief Send an RPT status message from a device.
  *
  * Status messages should only be sent in response to RDM commands received over RDMnet, if
- * something has gone wrong while attempting to resolve the command. The LocalRptStatus struct
- * should be filled in using rdmnet_create_status_from_command() or
- * rdmnet_create_status_from_command_with_str(), which will ensure that the members are set
- * properly.
+ * something has gone wrong while attempting to resolve the command.
  *
  * \param[in] handle Handle to the device from which to send the RPT status.
  * \param[in] status Status message to send.
@@ -226,32 +247,62 @@ etcpal_error_t rdmnet_device_send_rdm_response(rdmnet_device_t handle, const Rdm
  * \return #kEtcPalErrInvalid: Invalid argument.
  * \return Other errors forwarded from rdmnet_rpt_client_send_status().
  */
-etcpal_error_t rdmnet_device_send_status(rdmnet_device_t handle, const RdmnetLocalRptStatus* status)
+etcpal_error_t rdmnet_device_send_status(rdmnet_device_t handle, const RdmnetRemoteRdmCommand* received_cmd,
+                                         rpt_status_code_t status_code, const char* status_string)
 {
   if (!handle)
     return kEtcPalErrInvalid;
 
-  return rdmnet_rpt_client_send_status(handle->client_handle, handle->scope_handle, status);
+  return rdmnet_rpt_client_send_status(handle->client_handle, handle->scope_handle, received_cmd, status_code,
+                                       status_string);
 }
 
 /*!
- * \brief Send a response to an RDM command received over LLRP.
+ * \brief Send an ACK response to an RDM command received over LLRP.
  *
- * The LlrpLocalRdmResponse struct should be filled in with rdmnet_create_llrp_response_from_command(),
- * which will ensure that the members are set properly.
- *
- * \param[in] handle Handle to the device from which to send the LLRP RDM response.
- * \param[in] resp Response to send.
- * \return #kEtcPalErrOk: Response sent successfully.
+ * \param[in] handle Handle to the device from which to send the LLRP RDM ACK response.
+ * \param[in] received_cmd Previously-received command that the ACK is a response to.
+ * \param[in] response_data Parameter data that goes with this ACK, or NULL if no data.
+ * \param[in] response_data_len Length in bytes of response_data, or 0 if no data.
+ * \return #kEtcPalErrOk: LLRP ACK response sent successfully.
  * \return #kEtcPalErrInvalid: Invalid argument.
- * \return Other errors forwarded from rdmnet_rpt_client_send_llrp_response().
+ * \return Other errors forwarded from rdmnet_rpt_client_send_llrp_ack().
  */
-etcpal_error_t rdmnet_device_send_llrp_response(rdmnet_device_t handle, const LlrpLocalRdmResponse* resp)
+etcpal_error_t rdmnet_device_send_llrp_ack(rdmnet_device_t handle, const LlrpRemoteRdmCommand* received_cmd,
+                                           const uint8_t* response_data, uint8_t response_data_len)
 {
   if (!handle)
     return kEtcPalErrInvalid;
 
-  return rdmnet_rpt_client_send_llrp_response(handle->client_handle, resp);
+  return rdmnet_rpt_client_send_llrp_ack(handle->client_handle, received_cmd, response_data, response_data_len);
+}
+
+/*!
+ * \brief Send an ACK response to an RDM command received over LLRP.
+ *
+ * \param[in] handle Handle to the device from which to send the LLRP RDM NACK response.
+ * \param[in] received_cmd Previously-received command that the ACK is a response to.
+ * \param[in] nack_reason RDM NACK reason code to send with the NACK.
+ * \return #kEtcPalErrOk: LLRP NACK response sent successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument.
+ * \return Other errors forwarded from rdmnet_rpt_client_send_llrp_nack().
+ */
+etcpal_error_t rdmnet_device_send_llrp_nack(rdmnet_device_t handle, const LlrpLocalRdmCommand* received_cmd,
+                                            rdm_nack_reason_t nack_reason)
+{
+  if (!handle)
+    return kEtcPalErrInvalid;
+
+  return rdmnet_rpt_client_send_llrp_nack(handle->client_handle, received_cmd, nack_reason);
+}
+
+etcpal_error_t rdmnet_device_request_dynamic_uids(rdmnet_device_t handle, const BrokerDynamicUidRequest* requests,
+                                                  size_t num_requests)
+{
+  if (!handle)
+    return kEtcPalErrInvalid;
+
+  return rdmnet_client_request_dynamic_uids(handle->client_handle, handle->scope_handle, requests, num_requests);
 }
 
 etcpal_error_t rdmnet_device_change_scope(rdmnet_device_t handle, const RdmnetScopeConfig* new_scope_config,
@@ -260,10 +311,7 @@ etcpal_error_t rdmnet_device_change_scope(rdmnet_device_t handle, const RdmnetSc
   if (!handle)
     return kEtcPalErrInvalid;
 
-  etcpal_error_t remove_res =
-      rdmnet_client_remove_scope(handle->client_handle, handle->scope_handle, disconnect_reason);
-  RDMNET_ASSERT(remove_res == kEtcPalErrOk);
-  return rdmnet_client_add_scope(handle->client_handle, new_scope_config, &handle->scope_handle);
+  return rdmnet_client_change_scope(handle->client_handle, handle->scope_handle, new_scope_config, disconnect_reason);
 }
 
 etcpal_error_t rdmnet_device_change_search_domain(rdmnet_device_t handle, const char* new_search_domain,
@@ -278,7 +326,7 @@ etcpal_error_t rdmnet_device_change_search_domain(rdmnet_device_t handle, const 
 void client_connected(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle, const RdmnetClientConnectedInfo* info,
                       void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
 
   RdmnetDevice* device = (RdmnetDevice*)context;
   if (device && scope_handle == device->scope_handle)
@@ -290,7 +338,7 @@ void client_connected(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle
 void client_connect_failed(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
                            const RdmnetClientConnectFailedInfo* info, void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
 
   RdmnetDevice* device = (RdmnetDevice*)context;
   if (device && scope_handle == device->scope_handle)
@@ -302,7 +350,7 @@ void client_connect_failed(rdmnet_client_t handle, rdmnet_client_scope_t scope_h
 void client_disconnected(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
                          const RdmnetClientDisconnectedInfo* info, void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
 
   RdmnetDevice* device = (RdmnetDevice*)context;
   if (device && scope_handle == device->scope_handle)
@@ -314,16 +362,16 @@ void client_disconnected(rdmnet_client_t handle, rdmnet_client_scope_t scope_han
 void client_broker_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle, const BrokerMessage* msg,
                                 void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
-  RDMNET_UNUSED_ARG(scope_handle);
-  RDMNET_UNUSED_ARG(context);
+  ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(scope_handle);
+  ETCPAL_UNUSED_ARG(context);
 
   etcpal_log(rdmnet_log_params, ETCPAL_LOG_INFO, "Got Broker message with vector %d", msg->vector);
 }
 
 void client_llrp_msg_received(rdmnet_client_t handle, const LlrpRemoteRdmCommand* cmd, void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
 
   RdmnetDevice* device = (RdmnetDevice*)context;
   if (device)
@@ -335,18 +383,21 @@ void client_llrp_msg_received(rdmnet_client_t handle, const LlrpRemoteRdmCommand
 void client_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle, const RptClientMessage* msg,
                          void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(scope_handle);
+  ETCPAL_UNUSED_ARG(msg);
+  ETCPAL_UNUSED_ARG(context);
 
-  RdmnetDevice* device = (RdmnetDevice*)context;
-  if (device && scope_handle == device->scope_handle)
-  {
-    if (msg->type == kRptClientMsgRdmCmd)
-    {
-      device->callbacks.rdm_command_received(device, &msg->payload.cmd, device->callback_context);
-    }
-    else
-    {
-      etcpal_log(rdmnet_log_params, ETCPAL_LOG_INFO, "Device incorrectly got non-RDM-command message.");
-    }
-  }
+  // RdmnetDevice* device = (RdmnetDevice*)context;
+  // if (device && scope_handle == device->scope_handle)
+  //{
+  //  if (msg->type == kRptClientMsgRdmCmd)
+  //  {
+  //    device->callbacks.rdm_command_received(device, &msg->payload.cmd, device->callback_context);
+  //  }
+  //  else
+  //  {
+  //    etcpal_log(rdmnet_log_params, ETCPAL_LOG_INFO, "Device incorrectly got non-RDM-command message.");
+  //  }
+  //}
 }

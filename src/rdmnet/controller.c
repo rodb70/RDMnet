@@ -20,6 +20,7 @@
 #include "rdmnet/controller.h"
 
 #include <string.h>
+#include "etcpal/common.h"
 #include "rdmnet/private/opts.h"
 #include "rdmnet/private/controller.h"
 
@@ -108,7 +109,8 @@ void rdmnet_controller_config_init(RdmnetControllerConfig* config, uint16_t manu
   if (config)
   {
     memset(config, 0, sizeof(RdmnetControllerConfig));
-    RPT_CLIENT_INIT_OPTIONAL_CONFIG_VALUES(&config->optional, manufacturer_id);
+    RDMNET_INIT_DYNAMIC_UID_REQUEST(&config->uid, manufacturer_id);
+    config->search_domain = E133_DEFAULT_DOMAIN;
   }
 }
 
@@ -140,7 +142,7 @@ etcpal_error_t rdmnet_controller_create(const RdmnetControllerConfig* config, rd
   client_config.cid = config->cid;
   client_config.callbacks = client_callbacks;
   client_config.callback_context = new_controller;
-  client_config.optional = config->optional;
+  // client_config.optional = config->optional;
 
   etcpal_error_t res = rdmnet_rpt_client_create(&client_config, &new_controller->client_handle);
   if (res == kEtcPalErrOk)
@@ -262,6 +264,53 @@ etcpal_error_t rdmnet_controller_get_scope(rdmnet_controller_t handle, rdmnet_cl
 }
 
 /*!
+ * \brief Request a client list from a broker.
+ *
+ * The response will be delivered via the \ref RdmnetControllerCallbacks::client_list_update_received
+ * "client_list_update_received" callback.
+ *
+ * \param[in] handle Handle to the controller from which to request the client list.
+ * \param[in] scope_handle Handle to the scope on which to request the client list.
+ * \return #kEtcPalErrOk: Request sent successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument.
+ * \return Other errors forwarded from rdmnet_client_request_client_list().
+ */
+etcpal_error_t rdmnet_controller_request_client_list(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle)
+{
+  if (!handle)
+    return kEtcPalErrInvalid;
+
+  return rdmnet_client_request_client_list(handle->client_handle, scope_handle);
+}
+
+/*!
+ * \brief Requesting the mapping of one or more dynamic UIDs to RIDs from a broker.
+ *
+ * The response will be delivered via the \ref RdmnetControllerCallbacks::dynamic_uid_mappings_received
+ * "dynamic_uid_mappings_received" callback.
+ *
+ * \param[in] handle Handle to the controller from which to request dynamic UID mappings.
+ * \param[in] scope_handle Handle to the scope on which to request dynamic UID mappings.
+ * \param[in] uids Array of UIDs for which to request the mapped RIDs.
+ * \param[in] num_uids Size of uids array.
+ * \return #kEtcPalErrOk: Dynamic UID mappings requested successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument.
+ * \return #kEtcPalErrNotInit: Module not initialized.
+ * \return #kEtcPalErrNotFound: Handle is not associated with a valid client instance, or
+ *                              scope_handle is not associated with a valid scope instance.
+ * \return #kEtcPalErrSys: An internal library or system call error occurred.
+ */
+etcpal_error_t rdmnet_controller_request_dynamic_uid_mappings(rdmnet_controller_t handle,
+                                                              rdmnet_client_scope_t scope_handle, const RdmUid* uids,
+                                                              size_t num_uids)
+{
+  ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(scope_handle);
+  ETCPAL_UNUSED_ARG(uids);
+  ETCPAL_UNUSED_ARG(num_uids);
+}
+
+/*!
  * \brief Send an RDM command from a controller on a scope.
  *
  * The response will be delivered via the \ref RdmnetControllerCallbacks::rdm_response_received
@@ -286,65 +335,92 @@ etcpal_error_t rdmnet_controller_send_rdm_command(rdmnet_controller_t handle, rd
 }
 
 /*!
- * \brief Send an RDM response from a controller on a scope.
+ * \brief Send an RDM ACK response from a controller on a scope.
  *
- * \param[in] handle Handle to the controller from which to send the RDM response.
- * \param[in] scope_handle Handle to the scope on which to send the RDM response.
- * \param[in] resp The RDM response data to send, including its addressing information.
- * \return #kEtcPalErrOk: Response sent successfully.
+ * \param[in] handle Handle to the controller from which to send the RDM ACK response.
+ * \param[in] scope_handle Handle to the scope on which to send the RDM ACK response.
+ * \param[in] received_cmd Previously-received command that the ACK is a response to.
+ * \param[in] response_data Parameter data that goes with this ACK, or NULL if no data.
+ * \param[in] response_data_len Length in bytes of response_data, or 0 if no data.
+ * \return #kEtcPalErrOk: ACK response sent successfully.
  * \return #kEtcPalErrInvalid: Invalid argument.
- * \return Other errors forwarded from rdmnet_rpt_client_send_rdm_response().
+ * \return Other errors forwarded from rdmnet_rpt_client_send_rdm_ack().
  */
-etcpal_error_t rdmnet_controller_send_rdm_response(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
-                                                   const RdmnetLocalRdmResponse* resp)
+etcpal_error_t rdmnet_controller_send_rdm_ack(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
+                                              const RdmnetRemoteRdmCommand* received_cmd, const uint8_t* response_data,
+                                              size_t response_data_len)
 {
   if (!handle)
     return kEtcPalErrInvalid;
 
-  return rdmnet_rpt_client_send_rdm_response(handle->client_handle, scope_handle, resp);
+  return rdmnet_rpt_client_send_rdm_ack(handle->client_handle, scope_handle, received_cmd, response_data,
+                                        response_data_len);
 }
 
 /*!
- * \brief Send an LLRP RDM response from a controller.
+ * \brief Send an RDM NACK response from a controller on a scope.
  *
- * \param[in] handle Handle to the controller from which to send the LLRP RDM response.
- * \param[in] resp The RDM response data to send, including its addressing information.
- * \return #kEtcPalErrOk: Response sent successfully.
+ * \param[in] handle Handle to the controller from which to send the RDM NACK response.
+ * \param[in] scope_handle Handle to the scope on which to send the RDM NACK response.
+ * \param[in] received_cmd Previously-received command that the NACK is a response to.
+ * \param[in] nack_reason RDM NACK reason code to send with the NACK.
+ * \return #kEtcPalErrOk: NACK response sent successfully.
  * \return #kEtcPalErrInvalid: Invalid argument.
- * \return Other errors forwarded from rdmnet_rpt_client_send_llrp_response().
+ * \return Other errors forwarded from rdmnet_rpt_client_send_rdm_nack().
  */
-etcpal_error_t rdmnet_controller_send_llrp_response(rdmnet_controller_t handle, const LlrpLocalRdmResponse* resp)
+etcpal_error_t rdmnet_controller_send_rdm_nack(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
+                                               const RdmnetRemoteRdmCommand* received_cmd,
+                                               rdm_nack_reason_t nack_reason)
 {
   if (!handle)
     return kEtcPalErrInvalid;
 
-  return rdmnet_rpt_client_send_llrp_response(handle->client_handle, resp);
+  return rdmnet_rpt_client_send_rdm_nack(handle->client_handle, scope_handle, received_cmd, nack_reason);
 }
 
 /*!
- * \brief Request a client list from a broker.
+ * \brief Send an LLRP RDM ACK response from a controller.
  *
- * The response will be delivered via the \ref RdmnetControllerCallbacks::client_list_update_received
- * "client_list_update_received" callback.
- *
- * \param[in] handle Handle to the controller from which to request the client list.
- * \param[in] scope_handle Handle to the scope on which to request the client list.
- * \return #kEtcPalErrOk: Request sent successfully.
+ * \param[in] handle Handle to the controller from which to send the LLRP RDM ACK response.
+ * \param[in] received_cmd Previously-received LLRP RDM command that the ACK is a response to.
+ * \param[in] response_data Parameter data that goes with this ACK, or NULL if no data.
+ * \param[in] response_data_len Length in bytes of response_data, or 0 if no data.
+ * \return #kEtcPalErrOk: LLRP ACK response sent successfully.
  * \return #kEtcPalErrInvalid: Invalid argument.
- * \return Other errors forwarded from rdmnet_client_request_client_list().
+ * \return Other errors forwarded from rdmnet_rpt_client_send_llrp_ack().
  */
-etcpal_error_t rdmnet_controller_request_client_list(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle)
+etcpal_error_t rdmnet_controller_send_llrp_ack(rdmnet_controller_t handle, const LlrpRemoteRdmCommand* received_cmd,
+                                               const uint8_t* response_data, uint8_t response_data_len)
 {
   if (!handle)
     return kEtcPalErrInvalid;
 
-  return rdmnet_client_request_client_list(handle->client_handle, scope_handle);
+  return rdmnet_rpt_client_send_llrp_ack(handle->client_handle, received_cmd, response_data, response_data_len);
+}
+
+/*!
+ * \brief Send an LLRP RDM NACK response from a controller.
+ *
+ * \param[in] handle Handle to the controller from which to send the LLRP RDM NACK response.
+ * \param[in] received_cmd Previously-received LLRP RDM command that the NACK is a response to.
+ * \param[in] nack_reason RDM NACK reason code to send with the NACK.
+ * \return #kEtcPalErrOk: LLRP NACK response sent successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument.
+ * \return Other errors forwarded from rdmnet_rpt_client_send_llrp_nack().
+ */
+etcpal_error_t rdmnet_controller_send_llrp_nack(rdmnet_controller_t handle, const LlrpLocalRdmCommand* received_cmd,
+                                                rdm_nack_reason_t nack_reason)
+{
+  if (!handle)
+    return kEtcPalErrInvalid;
+
+  return rdmnet_rpt_client_send_llrp_nack(handle->client_handle, received_cmd, nack_reason);
 }
 
 void client_connected(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle, const RdmnetClientConnectedInfo* info,
                       void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
 
   RdmnetController* controller = (RdmnetController*)context;
   if (controller)
@@ -356,7 +432,7 @@ void client_connected(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle
 void client_connect_failed(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
                            const RdmnetClientConnectFailedInfo* info, void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
 
   RdmnetController* controller = (RdmnetController*)context;
   if (controller)
@@ -368,7 +444,7 @@ void client_connect_failed(rdmnet_client_t handle, rdmnet_client_scope_t scope_h
 void client_disconnected(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
                          const RdmnetClientDisconnectedInfo* info, void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
 
   RdmnetController* controller = (RdmnetController*)context;
   if (controller)
@@ -380,7 +456,7 @@ void client_disconnected(rdmnet_client_t handle, rdmnet_client_scope_t scope_han
 void client_broker_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle, const BrokerMessage* msg,
                                 void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
 
   RdmnetController* controller = (RdmnetController*)context;
   if (controller)
@@ -404,7 +480,7 @@ void client_broker_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t sc
 
 void client_llrp_msg_received(rdmnet_client_t handle, const LlrpRemoteRdmCommand* cmd, void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
 
   RdmnetController* controller = (RdmnetController*)context;
   if (controller)
@@ -423,7 +499,7 @@ void client_llrp_msg_received(rdmnet_client_t handle, const LlrpRemoteRdmCommand
 void client_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle, const RptClientMessage* msg,
                          void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
 
   RdmnetController* controller = (RdmnetController*)context;
   if (controller)

@@ -44,14 +44,14 @@ struct RdmnetScopeMonitorRef
   RdmnetScopeMonitorRef* next;
 };
 
-etcpal_error_t monitored_scope_init();
+etcpal_error_t monitored_scope_init(void);
 RdmnetScopeMonitorRef* scope_monitor_new(const RdmnetScopeMonitorConfig* config);
 void scope_monitor_insert(RdmnetScopeMonitorRef* scope_ref);
 bool scope_monitor_ref_is_valid(const RdmnetScopeMonitorRef* ref);
 void scope_monitor_for_each(void (*for_each_func)(RdmnetScopeMonitorRef*));
 void scope_monitor_remove(const RdmnetScopeMonitorRef* ref);
 void scope_monitor_delete(RdmnetScopeMonitorRef* ref);
-void scope_monitor_delete_all();
+void scope_monitor_delete_all(void);
 
 #ifdef __cplusplus
 }

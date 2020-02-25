@@ -31,28 +31,6 @@
 extern "C" {
 #endif
 
-/* Suppress deprecated function warnings on Windows/MSVC. This is mostly used in situations where
- * Microsoft warns us that a function like strncpy() could be unsafe, but we want to be portable
- * and have made sure that we're using it in a safe way (e.g. by manually inserting null
- * terminators). */
-#ifdef _MSC_VER
-
-#define RDMNET_MSVC_NO_DEP_WRN __pragma(warning(suppress : 4996))
-
-#define RDMNET_MSVC_BEGIN_NO_DEP_WARNINGS() __pragma(warning(push)) __pragma(warning(disable : 4996))
-#define RDMNET_MSVC_END_NO_DEP_WARNINGS() __pragma(warning(pop))
-
-#else /* _MSC_VER */
-
-#define RDMNET_MSVC_NO_DEP_WRN
-#define RDMNET_MSVC_BEGIN_NO_DEP_WARNINGS()
-#define RDMNET_MSVC_END_NO_DEP_WARNINGS()
-
-#endif /* _MSC_VER */
-
-/* Meaningful macro to suppress warnings on unused arguments */
-#define RDMNET_UNUSED_ARG(arg) ((void)arg)
-
 char* rdmnet_safe_strncpy(char* destination, const char* source, size_t num);
 
 #ifdef __cplusplus

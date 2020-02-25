@@ -21,12 +21,12 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include "etcpal/common.h"
+#include "etcpal/netint.h"
 #include "etcpal/rbtree.h"
 #include "etcpal/socket.h"
-#include "etcpal/netint.h"
 #include "rdm/responder.h"
 #include "rdmnet/defs.h"
-#include "rdmnet/core/util.h"
 #include "rdmnet/private/core.h"
 #include "rdmnet/private/llrp_target.h"
 #include "rdmnet/private/llrp.h"
@@ -51,11 +51,11 @@
 /***************************** Private macros ********************************/
 
 #if RDMNET_DYNAMIC_MEM
-#define llrp_target_alloc() (LlrpTarget*)malloc(sizeof(LlrpTarget))
-#define llrp_target_dealloc(ptr) free(ptr)
+#define LLRP_TARGET_ALLOC() (LlrpTarget*)malloc(sizeof(LlrpTarget))
+#define LLRP_TARGET_DEALLOC(ptr) free(ptr)
 #else
-#define llrp_target_alloc() (LlrpTarget*)etcpal_mempool_alloc(llrp_targets)
-#define llrp_target_dealloc(ptr) etcpal_mempool_free(llrp_targets, ptr)
+#define LLRP_TARGET_ALLOC() (LlrpTarget*)etcpal_mempool_alloc(llrp_targets)
+#define LLRP_TARGET_DEALLOC(ptr) etcpal_mempool_free(llrp_targets, ptr)
 #endif
 
 #define INIT_CALLBACK_INFO(cbptr) ((cbptr)->which = kTargetCallbackNone)
@@ -107,7 +107,7 @@ etcpal_error_t llrp_target_init(void)
   etcpal_error_t res = kEtcPalErrOk;
 
 #if !RDMNET_DYNAMIC_MEM
-  /* Init memory pool */
+  // Init memory pools
   res |= etcpal_mempool_init(llrp_targets);
   res |= etcpal_mempool_init(llrp_target_rb_nodes);
 #endif
@@ -130,7 +130,7 @@ etcpal_error_t llrp_target_init(void)
 
 static void target_dealloc(const EtcPalRbTree* self, EtcPalRbNode* node)
 {
-  RDMNET_UNUSED_ARG(self);
+  ETCPAL_UNUSED_ARG(self);
 
   LlrpTarget* target = (LlrpTarget*)node->value;
   if (target)
@@ -638,7 +638,7 @@ etcpal_error_t create_new_target(const LlrpTargetConfig* config, LlrpTarget** ne
   if (new_handle == LLRP_TARGET_INVALID)
     return res;
 
-  LlrpTarget* target = llrp_target_alloc();
+  LlrpTarget* target = LLRP_TARGET_ALLOC();
   if (target)
   {
     res = setup_target_netints(&config->optional, target);
@@ -677,18 +677,18 @@ etcpal_error_t create_new_target(const LlrpTargetConfig* config, LlrpTarget** ne
         {
           etcpal_rbtree_remove(&state.targets, target);
           cleanup_target_netints(target);
-          llrp_target_dealloc(target);
+          LLRP_TARGET_DEALLOC(target);
         }
       }
       else
       {
         cleanup_target_netints(target);
-        llrp_target_dealloc(target);
+        LLRP_TARGET_DEALLOC(target);
       }
     }
     else
     {
-      llrp_target_dealloc(target);
+      LLRP_TARGET_DEALLOC(target);
     }
   }
 
@@ -727,7 +727,7 @@ LlrpTargetNetintInfo* get_target_netint(LlrpTarget* target, const RdmnetMcastNet
 
 void release_target(LlrpTarget* target)
 {
-  RDMNET_UNUSED_ARG(target);
+  ETCPAL_UNUSED_ARG(target);
   rdmnet_readunlock();
 }
 
@@ -738,7 +738,7 @@ void destroy_target(LlrpTarget* target, bool remove_from_tree)
     cleanup_target_netints(target);
     if (remove_from_tree)
       etcpal_rbtree_remove(&state.targets, target);
-    llrp_target_dealloc(target);
+    LLRP_TARGET_DEALLOC(target);
   }
 }
 
@@ -750,7 +750,7 @@ bool target_handle_in_use(int handle_val)
 
 int target_compare_by_handle(const EtcPalRbTree* self, const void* value_a, const void* value_b)
 {
-  RDMNET_UNUSED_ARG(self);
+  ETCPAL_UNUSED_ARG(self);
 
   const LlrpTarget* a = (const LlrpTarget*)value_a;
   const LlrpTarget* b = (const LlrpTarget*)value_b;
@@ -759,7 +759,7 @@ int target_compare_by_handle(const EtcPalRbTree* self, const void* value_a, cons
 
 int target_compare_by_cid(const EtcPalRbTree* self, const void* value_a, const void* value_b)
 {
-  RDMNET_UNUSED_ARG(self);
+  ETCPAL_UNUSED_ARG(self);
 
   const LlrpTarget* a = (const LlrpTarget*)value_a;
   const LlrpTarget* b = (const LlrpTarget*)value_b;

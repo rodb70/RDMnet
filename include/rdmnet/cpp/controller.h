@@ -25,6 +25,7 @@
 
 #include <string>
 #include <vector>
+#include "etcpal/common.h"
 #include "etcpal/cpp/error.h"
 #include "etcpal/cpp/inet.h"
 #include "etcpal/cpp/uuid.h"
@@ -142,9 +143,9 @@ public:
   virtual void HandleBrokerDynamicUidMappingsReceived(Controller& controller, ScopeHandle scope_handle,
                                                       const BrokerDynamicUidAssignmentList& list)
   {
-    RDMNET_UNUSED_ARG(controller);
-    RDMNET_UNUSED_ARG(scope_handle);
-    RDMNET_UNUSED_ARG(list);
+    ETCPAL_UNUSED_ARG(controller);
+    ETCPAL_UNUSED_ARG(scope_handle);
+    ETCPAL_UNUSED_ARG(list);
   }
 };
 

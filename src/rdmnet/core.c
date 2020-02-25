@@ -248,7 +248,7 @@ void rdmnet_core_remove_polled_socket(etcpal_socket_t socket)
 #if RDMNET_USE_TICK_THREAD
 void rdmnet_tick_thread(void* arg)
 {
-  RDMNET_UNUSED_ARG(arg);
+  ETCPAL_UNUSED_ARG(arg);
   while (core_state.tickthread_run)
   {
     rdmnet_core_tick();

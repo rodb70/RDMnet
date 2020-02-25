@@ -138,11 +138,11 @@ typedef struct ClientEntryState
     (cstateptr)->client_protocol = kClientProtocolUnknown; \
   } while (0)
 
-typedef struct BrokerClientListState
+typedef struct ClientListState
 {
   PduBlockState block;
   ClientEntryState entry;
-} BrokerClientListState;
+} ClientListState;
 
 #define INIT_CLIENT_LIST_STATE(clstateptr, blocksize, bmsgptr)                           \
   do                                                                                     \
@@ -191,7 +191,7 @@ typedef struct BrokerState
   union
   {
     GenericListState data_list;
-    BrokerClientListState client_list;
+    ClientListState client_list;
     ClientConnectState client_connect;
     ClientEntryUpdateState update;
     PduBlockState unknown;

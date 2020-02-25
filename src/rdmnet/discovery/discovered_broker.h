@@ -51,7 +51,7 @@ struct DiscoveredBroker
 /*
  * Initialize the discovered_broker module.
  */
-etcpal_error_t discovered_broker_init();
+etcpal_error_t discovered_broker_init(void);
 
 /*
  * Allocates a new discovered broker reference for a given monitored scope. service_name is the

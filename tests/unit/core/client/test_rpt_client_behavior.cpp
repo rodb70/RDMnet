@@ -20,8 +20,9 @@
 #include <array>
 #include <map>
 #include <utility>
+#include "etcpal/common.h"
 #include "etcpal/cpp/inet.h"
-#include "rdmnet/core/client.h"
+#include "rdmnet/private/client.h"
 #include "rdmnet_mock/core.h"
 #include "rdmnet_mock/core/connection.h"
 #include "rdmnet_mock/core/discovery.h"
@@ -47,7 +48,7 @@ static RdmnetScopeMonitorConfig last_monitor_config;
 static etcpal_error_t start_monitoring_and_save_config(const RdmnetScopeMonitorConfig* config,
                                                        rdmnet_scope_monitor_t* handle, int* platform_specific_error)
 {
-  RDMNET_UNUSED_ARG(platform_specific_error);
+  ETCPAL_UNUSED_ARG(platform_specific_error);
   *handle = last_monitor_handle;
   last_monitor_config = *config;
   return kEtcPalErrOk;
@@ -59,10 +60,10 @@ static RdmnetClientConnectFailedInfo client_connect_failed_info;
 static void custom_connect_failed_cb(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
                                      const RdmnetClientConnectFailedInfo* info, void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
-  RDMNET_UNUSED_ARG(scope_handle);
+  ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(scope_handle);
   client_connect_failed_info = *info;
-  RDMNET_UNUSED_ARG(context);
+  ETCPAL_UNUSED_ARG(context);
 }
 
 static RdmnetClientDisconnectedInfo client_disconn_info;
@@ -71,10 +72,10 @@ static RdmnetClientDisconnectedInfo client_disconn_info;
 static void custom_disconnected_cb(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
                                    const RdmnetClientDisconnectedInfo* info, void* context)
 {
-  RDMNET_UNUSED_ARG(handle);
-  RDMNET_UNUSED_ARG(scope_handle);
+  ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(scope_handle);
   client_disconn_info = *info;
-  RDMNET_UNUSED_ARG(context);
+  ETCPAL_UNUSED_ARG(context);
 }
 
 static EtcPalSockAddr last_connect_addr;
@@ -83,9 +84,9 @@ static EtcPalSockAddr last_connect_addr;
 static etcpal_error_t connect_and_save_address(rdmnet_conn_t handle, const EtcPalSockAddr* remote_addr,
                                                const BrokerClientConnectMsg* connect_data)
 {
-  RDMNET_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(handle);
   last_connect_addr = *remote_addr;
-  RDMNET_UNUSED_ARG(connect_data);
+  ETCPAL_UNUSED_ARG(connect_data);
   return kEtcPalErrOk;
 }
 }

@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include "etcpal/acn_rlp.h"
+#include "etcpal/common.h"
 #include "etcpal/pack.h"
 #include "rdmnet/core.h"
 #include "rdmnet/private/broker_prot.h"
@@ -897,7 +898,7 @@ EptClientEntry* alloc_next_ept_client_entry(EptClientList* clist)
 size_t parse_request_dynamic_uid_assignment(GenericListState* lstate, const uint8_t* data, size_t datalen,
                                             BrokerDynamicUidRequestList* rlist, parse_result_t* result)
 {
-  RDMNET_UNUSED_ARG(rdmnet_log_params);
+  ETCPAL_UNUSED_ARG(rdmnet_log_params);
 
   size_t bytes_parsed = 0;
   parse_result_t res = kPSNoData;
@@ -952,7 +953,7 @@ size_t parse_request_dynamic_uid_assignment(GenericListState* lstate, const uint
 size_t parse_dynamic_uid_assignment_list(GenericListState* lstate, const uint8_t* data, size_t datalen,
                                          BrokerDynamicUidAssignmentList* alist, parse_result_t* result)
 {
-  RDMNET_UNUSED_ARG(rdmnet_log_params);
+  ETCPAL_UNUSED_ARG(rdmnet_log_params);
 
   size_t bytes_parsed = 0;
   parse_result_t res = kPSNoData;
@@ -1018,7 +1019,7 @@ size_t parse_fetch_dynamic_uid_assignment_list(GenericListState* lstate, const u
   size_t bytes_parsed = 0;
   parse_result_t res = kPSNoData;
 
-  RDMNET_UNUSED_ARG(rdmnet_log_params);
+  ETCPAL_UNUSED_ARG(rdmnet_log_params);
 
   while (datalen - bytes_parsed >= 6)
   {

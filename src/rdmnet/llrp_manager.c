@@ -19,6 +19,7 @@
 
 #include "rdmnet/llrp_manager.h"
 
+#include "etcpal/common.h"
 #include "rdm/uid.h"
 #include "rdm/controller.h"
 #include "rdmnet/core/util.h"
@@ -94,7 +95,7 @@ etcpal_error_t llrp_manager_init(void)
 #if RDMNET_DYNAMIC_MEM
 static void manager_dealloc(const EtcPalRbTree* self, EtcPalRbNode* node)
 {
-  RDMNET_UNUSED_ARG(self);
+  ETCPAL_UNUSED_ARG(self);
 
   LlrpManager* manager = (LlrpManager*)node->value;
   if (manager)
@@ -474,7 +475,7 @@ void discovered_target_clear_cb(const EtcPalRbTree* self, EtcPalRbNode* node)
     target = next_target;
   }
   manager_node_dealloc(node);
-  RDMNET_UNUSED_ARG(self);
+  ETCPAL_UNUSED_ARG(self);
 }
 
 void process_manager_state(LlrpManager* manager, ManagerCallbackDispatchInfo* cb)
@@ -496,7 +497,7 @@ void process_manager_state(LlrpManager* manager, ManagerCallbackDispatchInfo* cb
 
 void manager_data_received(const uint8_t* data, size_t data_size, const RdmnetMcastNetintId* netint)
 {
-  RDMNET_UNUSED_ARG(netint);
+  ETCPAL_UNUSED_ARG(netint);
 
   ManagerCallbackDispatchInfo cb;
   INIT_CALLBACK_INFO(&cb);
@@ -746,7 +747,7 @@ etcpal_error_t get_manager(llrp_manager_t handle, LlrpManager** manager)
 
 void release_manager(LlrpManager* manager)
 {
-  RDMNET_UNUSED_ARG(manager);
+  ETCPAL_UNUSED_ARG(manager);
   rdmnet_readunlock();
 }
 
@@ -781,7 +782,7 @@ bool manager_handle_in_use(int handle_val)
 
 int manager_compare_by_handle(const EtcPalRbTree* self, const void* value_a, const void* value_b)
 {
-  RDMNET_UNUSED_ARG(self);
+  ETCPAL_UNUSED_ARG(self);
 
   const LlrpManager* a = (const LlrpManager*)value_a;
   const LlrpManager* b = (const LlrpManager*)value_b;
@@ -790,7 +791,7 @@ int manager_compare_by_handle(const EtcPalRbTree* self, const void* value_a, con
 
 int manager_compare_by_cid_and_netint(const EtcPalRbTree* self, const void* value_a, const void* value_b)
 {
-  RDMNET_UNUSED_ARG(self);
+  ETCPAL_UNUSED_ARG(self);
 
   const LlrpManager* a = (const LlrpManager*)value_a;
   const LlrpManager* b = (const LlrpManager*)value_b;
@@ -814,7 +815,7 @@ int manager_compare_by_cid_and_netint(const EtcPalRbTree* self, const void* valu
 
 int discovered_target_compare(const EtcPalRbTree* self, const void* value_a, const void* value_b)
 {
-  RDMNET_UNUSED_ARG(self);
+  ETCPAL_UNUSED_ARG(self);
   const DiscoveredTargetInternal* a = (const DiscoveredTargetInternal*)value_a;
   const DiscoveredTargetInternal* b = (const DiscoveredTargetInternal*)value_b;
   return rdm_uid_compare(&a->uid, &b->uid);

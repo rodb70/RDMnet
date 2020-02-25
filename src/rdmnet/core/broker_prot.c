@@ -20,6 +20,7 @@
 #include "rdmnet/core/broker_prot.h"
 
 #include <string.h>
+#include "etcpal/common.h"
 #include "etcpal/pack.h"
 #include "rdmnet/core/util.h"
 #include "rdmnet/private/connection.h"
@@ -489,12 +490,12 @@ size_t broker_pack_rpt_client_list(uint8_t* buf, size_t buflen, const EtcPalUuid
 size_t broker_pack_ept_client_list(uint8_t* buf, size_t buflen, const EtcPalUuid* local_cid, uint16_t vector,
                                    const EptClientEntry* client_entries, size_t num_client_entries)
 {
-  RDMNET_UNUSED_ARG(buf);
-  RDMNET_UNUSED_ARG(buflen);
-  RDMNET_UNUSED_ARG(local_cid);
-  RDMNET_UNUSED_ARG(vector);
-  RDMNET_UNUSED_ARG(client_entries);
-  RDMNET_UNUSED_ARG(num_client_entries);
+  ETCPAL_UNUSED_ARG(buf);
+  ETCPAL_UNUSED_ARG(buflen);
+  ETCPAL_UNUSED_ARG(local_cid);
+  ETCPAL_UNUSED_ARG(vector);
+  ETCPAL_UNUSED_ARG(client_entries);
+  ETCPAL_UNUSED_ARG(num_client_entries);
   // TODO
   return 0;
 }
