@@ -57,9 +57,11 @@ static void client_disconnected(rdmnet_client_t handle, rdmnet_client_scope_t sc
                                 const RdmnetClientDisconnectedInfo* info, void* context);
 static void client_broker_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
                                        const BrokerMessage* msg, void* context);
-static void client_llrp_msg_received(rdmnet_client_t handle, const LlrpRemoteRdmCommand* cmd, void* context);
-static void client_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle, const RptClientMessage* msg,
-                                void* context);
+static llrp_response_action_t client_llrp_msg_received(rdmnet_client_t handle, const LlrpRemoteRdmCommand* cmd,
+                                                       LlrpSyncRdmResponse* response, void* context);
+static rdmnet_response_action_t client_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
+                                                    const RptClientMessage* msg, RdmnetSyncRdmResponse* response,
+                                                    void* context);
 
 // clang-format off
 static const RptClientCallbacks client_callbacks =
@@ -222,7 +224,12 @@ etcpal_error_t rdmnet_controller_add_scope(rdmnet_controller_t handle, const Rdm
  */
 etcpal_error_t rdmnet_controller_add_default_scope(rdmnet_controller_t handle, rdmnet_client_scope_t* scope_handle)
 {
-  return kEtcPalErrNotImpl;
+  if (!handle)
+    return kEtcPalErrInvalid;
+
+  RdmnetScopeConfig default_scope;
+  RDMNET_CLIENT_SET_DEFAULT_SCOPE(&default_scope);
+  return rdmnet_client_add_scope(handle->client_handle, &default_scope, scope_handle);
 }
 
 /*!
@@ -247,19 +254,47 @@ etcpal_error_t rdmnet_controller_remove_scope(rdmnet_controller_t handle, rdmnet
 }
 
 /*!
- * \brief Retrieve information about a previously-added scope.
+ * \brief Retrieve the scope string of a previously-added scope.
  *
- * \param[in] handle Handle to the controller from which to retrieve scope information.
- * \param[in] scope_handle Handle to the scope for which to retrieve the configuration.
- * \param[out] scope_config Filled in with information about the scope.
+ * \param[in] handle Handle to the controller from which to retrieve the scope string.
+ * \param[in] scope_handle Handle to the scope for which to retrieve the scope string.
+ * \param[out] scope_str_buf Filled in on success with the scope string. Must be at least of length
+ *                           #E133_SCOPE_STRING_PADDED_LENGTH.
  * \return #kEtcPalErrOk: Scope information retrieved successfully.
  * \return #kEtcPalErrInvalid: Invalid argument.
- * \return Other errors forwarded from rdmnet_client_get_scope().
+ * \return Other errors forwarded from rdmnet_client_get_scope_string().
  */
-etcpal_error_t rdmnet_controller_get_scope(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
-                                           RdmnetScopeConfig* scope_config)
+etcpal_error_t rdmnet_controller_get_scope_string(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
+                                                  char* scope_str_buf)
 {
-  // TODO
+  ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(scope_handle);
+  ETCPAL_UNUSED_ARG(scope_str_buf);
+  return kEtcPalErrNotImpl;
+}
+
+/*!
+ * \brief Retrieve the static broker configuration of a previously-added scope.
+ *
+ * \param[in] handle Handle to the controller from which to retrieve the static broker configuration.
+ * \param[in] scope_handle Handle to the scope for which to retrieve the static broker configuration.
+ * \param[out] has_static_broker_addr Filled in on success with whether the scope has a static
+ *                                    broker address.
+ * \param[out] has_static_broker_addr Filled in on success with the static broker address, if
+ *                                    present.
+ * \return #kEtcPalErrOk: Scope string retrieved successfully.
+ * \return #kEtcPalErrInvalid: Invalid argument.
+ * \return Other errors forwarded from rdmnet_client_get_static_broker_config().
+ */
+etcpal_error_t rdmnet_controller_get_static_broker_config(rdmnet_controller_t handle,
+                                                          rdmnet_client_scope_t scope_handle,
+                                                          bool* has_static_broker_addr,
+                                                          EtcPalSockAddr* static_broker_addr)
+{
+  ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(scope_handle);
+  ETCPAL_UNUSED_ARG(has_static_broker_addr);
+  ETCPAL_UNUSED_ARG(static_broker_addr);
   return kEtcPalErrNotImpl;
 }
 
@@ -478,16 +513,19 @@ void client_broker_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t sc
   }
 }
 
-void client_llrp_msg_received(rdmnet_client_t handle, const LlrpRemoteRdmCommand* cmd, void* context)
+llrp_response_action_t client_llrp_msg_received(rdmnet_client_t handle, const LlrpRemoteRdmCommand* cmd,
+                                                LlrpSyncRdmResponse* response, void* context)
 {
   ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(response);
 
   RdmnetController* controller = (RdmnetController*)context;
   if (controller)
   {
     if (controller->rdm_handle_method == kRdmHandleMethodUseCallbacks)
     {
-      controller->rdm_handler.callbacks.llrp_rdm_command_received(controller, cmd, controller->callback_context);
+      return controller->rdm_handler.callbacks.llrp_rdm_command_received(controller, cmd, response,
+                                                                         controller->callback_context);
     }
     else
     {
@@ -496,10 +534,12 @@ void client_llrp_msg_received(rdmnet_client_t handle, const LlrpRemoteRdmCommand
   }
 }
 
-void client_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle, const RptClientMessage* msg,
-                         void* context)
+rdmnet_response_action_t client_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
+                                             const RptClientMessage* msg, RdmnetSyncRdmResponse* response,
+                                             void* context)
 {
   ETCPAL_UNUSED_ARG(handle);
+  ETCPAL_UNUSED_ARG(response);
 
   RdmnetController* controller = (RdmnetController*)context;
   if (controller)
@@ -509,8 +549,8 @@ void client_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t scope_han
       case kRptClientMsgRdmCmd:
         if (controller->rdm_handle_method == kRdmHandleMethodUseCallbacks)
         {
-          controller->rdm_handler.callbacks.rdm_command_received(controller, scope_handle, GET_REMOTE_RDM_COMMAND(msg),
-                                                                 controller->callback_context);
+          return controller->rdm_handler.callbacks.rdm_command_received(
+              controller, scope_handle, RDMNET_GET_REMOTE_RDM_COMMAND(msg), response, controller->callback_context);
         }
         else
         {
@@ -518,15 +558,16 @@ void client_msg_received(rdmnet_client_t handle, rdmnet_client_scope_t scope_han
         }
         break;
       case kRptClientMsgRdmResp:
-        controller->callbacks.rdm_response_received(controller, scope_handle, GET_REMOTE_RDM_RESPONSE(msg),
+        controller->callbacks.rdm_response_received(controller, scope_handle, RDMNET_GET_REMOTE_RDM_RESPONSE(msg),
                                                     controller->callback_context);
-        break;
+        return kRdmnetResponseActionDefer;
       case kRptClientMsgStatus:
-        controller->callbacks.status_received(controller, scope_handle, GET_REMOTE_RPT_STATUS(msg),
+        controller->callbacks.status_received(controller, scope_handle, RDMNET_GET_REMOTE_RPT_STATUS(msg),
                                               controller->callback_context);
-        break;
+        return kRdmnetResponseActionDefer;
       default:
         break;
     }
   }
+  return kRdmnetResponseActionDefer;
 }

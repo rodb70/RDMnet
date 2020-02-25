@@ -19,9 +19,9 @@
 
 #include "rdmnet/core/rpt_prot.h"
 
+#include "etcpal/common.h"
 #include "etcpal/pack.h"
 #include "rdmnet/defs.h"
-#include "rdmnet/core/util.h"
 #include "rdmnet/private/connection.h"
 #include "rdmnet/private/rpt_prot.h"
 
@@ -302,7 +302,7 @@ size_t rpt_pack_status(uint8_t* buf, size_t buflen, const EtcPalUuid* local_cid,
   cur_ptr += RPT_STATUS_HEADER_SIZE;
   if (status_pdu_size > RPT_STATUS_HEADER_SIZE)
   {
-    RDMNET_MSVC_NO_DEP_WRN strncpy((char*)cur_ptr, status->status_string, RPT_STATUS_STRING_MAXLEN);
+    ETCPAL_MSVC_NO_DEP_WRN strncpy((char*)cur_ptr, status->status_string, RPT_STATUS_STRING_MAXLEN);
     cur_ptr += (status_pdu_size - RPT_STATUS_HEADER_SIZE);
   }
   return (size_t)(cur_ptr - buf);

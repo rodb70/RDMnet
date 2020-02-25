@@ -23,9 +23,8 @@
 
 #include "etcpal/cpp/inet.h"
 #include "etcpal/cpp/uuid.h"
-#include "etcpal/log.h"
-#include "rdm/message.h"
-#include "rdmnet/llrp_manager.h"
+#include "etcpal/cpp/log.h"
+#include "rdmnet/cpp/llrp_manager.h"
 
 struct LLRPTargetInfo
 {
@@ -33,10 +32,10 @@ struct LLRPTargetInfo
   bool identifying{false};
 };
 
-class LLRPManager
+class LlrpManagerExample : public rdmnet::llrp::ManagerNotifyHandler
 {
 public:
-  bool Startup(const etcpal::Uuid& my_cid, const EtcPalLogParams* log_params = nullptr);
+  bool Startup(const etcpal::Uuid& my_cid, const etcpal::Logger& logger);
   void Shutdown();
 
   enum class ParseResult
@@ -53,7 +52,7 @@ public:
   void PrintCommandList();
   bool ParseCommand(const std::string& line);
 
-  void Discover(llrp_manager_t manager_handle);
+  void Discover(rdmnet::llrp::Manager& manager);
   void PrintTargets();
   void PrintNetints();
   void GetDeviceInfo(int target_handle);
@@ -67,16 +66,17 @@ public:
   void SetComponentScope(int target_handle, int scope_slot, const std::string& scope_utf8,
                          const etcpal::SockAddr& static_config);
 
-  void TargetDiscovered(const DiscoveredLlrpTarget& target);
-  void DiscoveryFinished();
-  void RdmRespReceived(const LlrpRemoteRdmResponse& resp);
+  void HandleLlrpTargetDiscovered(rdmnet::llrp::ManagerHandle handle, const DiscoveredLlrpTarget& target) override;
+  void HandleLlrpDiscoveryFinished(rdmnet::llrp::ManagerHandle handle) override;
+  void HandleLlrpRdmResponseReceived(rdmnet::llrp::ManagerHandle handle,
+                                     const rdmnet::llrp::RemoteRdmResponse& resp) override;
 
 private:
-  bool SendRDMAndGetResponse(llrp_manager_t manager, const EtcPalUuid& target_cid, const RdmCommand& cmd_data,
-                             RdmResponse& resp_data);
+  bool SendRDMAndGetResponse(rdmnet::llrp::ManagerHandle manager, const EtcPalUuid& target_cid,
+                             const RdmCommand& cmd_data, RdmResponse& resp_data);
   static const char* LLRPComponentTypeToString(llrp_component_t type);
 
-  std::map<llrp_manager_t, EtcPalNetintInfo> managers_;
+  std::map<rdmnet::llrp::ManagerHandle, rdmnet::llrp::Manager> managers_;
   etcpal::Uuid cid_;
 
   std::map<int, LLRPTargetInfo> targets_;

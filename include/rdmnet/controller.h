@@ -150,8 +150,10 @@ typedef struct RdmnetControllerCallbacks
                                         const BrokerDynamicUidAssignmentList* list, void* context);
 } RdmnetControllerCallbacks;
 
-/*! A set of callbacks which can be optionally provided to handle RDM commands addressed to a
- *  controller. */
+/*!
+ * A set of callbacks which can be optionally provided to handle RDM commands addressed to a
+ * controller.
+ */
 typedef struct RdmnetControllerRdmCmdCallbacks
 {
   /*!
@@ -161,8 +163,9 @@ typedef struct RdmnetControllerRdmCmdCallbacks
    * \param[in] cmd The RDM command data.
    * \param[in] context Context pointer that was given at the creation of the controller instance.
    */
-  void (*rdm_command_received)(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
-                               const RdmnetRemoteRdmCommand* cmd, void* context);
+  rdmnet_response_action_t (*rdm_command_received)(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
+                                                   const RdmnetRemoteRdmCommand* cmd, RdmnetSyncRdmResponse* response,
+                                                   void* context);
 
   /*!
    * \brief An RDM command has been received over LLRP, addressed to a controller.
@@ -170,7 +173,8 @@ typedef struct RdmnetControllerRdmCmdCallbacks
    * \param[in] cmd The RDM command data.
    * \param[in] context Context pointer that was given at the creation of the controller instance.
    */
-  void (*llrp_rdm_command_received)(rdmnet_controller_t handle, const LlrpRemoteRdmCommand* cmd, void* context);
+  llrp_response_action_t (*llrp_rdm_command_received)(rdmnet_controller_t handle, const LlrpRemoteRdmCommand* cmd,
+                                                      LlrpSyncRdmResponse* response, void* context);
 } RdmnetControllerRdmCmdCallbacks;
 
 /*! A set of data for the controller library to use for handling RDM commands internally. */
@@ -333,8 +337,12 @@ etcpal_error_t rdmnet_controller_add_scope(rdmnet_controller_t handle, const Rdm
 etcpal_error_t rdmnet_controller_add_default_scope(rdmnet_controller_t handle, rdmnet_client_scope_t* scope_handle);
 etcpal_error_t rdmnet_controller_remove_scope(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
                                               rdmnet_disconnect_reason_t reason);
-etcpal_error_t rdmnet_controller_get_scope(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
-                                           RdmnetScopeConfig* scope_config);
+etcpal_error_t rdmnet_controller_get_scope_string(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle,
+                                                  char* scope_str_buf);
+etcpal_error_t rdmnet_controller_get_static_broker_config(rdmnet_controller_t handle,
+                                                          rdmnet_client_scope_t scope_handle,
+                                                          bool* has_static_broker_addr,
+                                                          EtcPalSockAddr* static_broker_addr);
 
 etcpal_error_t rdmnet_controller_request_client_list(rdmnet_controller_t handle, rdmnet_client_scope_t scope_handle);
 etcpal_error_t rdmnet_controller_request_dynamic_uid_mappings(rdmnet_controller_t handle,

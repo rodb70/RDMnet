@@ -136,20 +136,6 @@ typedef enum
 } rdmnet_response_action_t;
 
 /*!
- * Enumeration representing an action to take after an "LLRP RDM command received" callback
- * completes.
- */
-typedef enum
-{
-  /*! Send an RDM ACK to the originating LLRP manager. */
-  kLlrpResponseActionSendAck,
-  /*! Send an RDM NACK with reason to the originating LLRP manager. */
-  kLlrpResponseActionSendNack,
-  /*! Defer the response to be sent later. Be sure to save the command. */
-  kLlrpResponseActionDefer
-} llrp_response_action_t;
-
-/*!
  * \name Client Callback Functions
  * \brief Function types used as callbacks for RPT and EPT clients.
  * @{
@@ -243,7 +229,7 @@ typedef llrp_response_action_t (*RdmnetClientLlrpMsgReceivedCb)(rdmnet_client_t 
  * \param[in] context Context pointer that was given at the creation of the client.
  */
 typedef rdmnet_response_action_t (*RptClientMsgReceivedCb)(rdmnet_client_t handle, rdmnet_client_scope_t scope_handle,
-                                                           const RptClientMessage* msg, RptClientMessage* response,
+                                                           const RptClientMessage* msg, RdmnetSyncRdmResponse* response,
                                                            void* context);
 
 /*!

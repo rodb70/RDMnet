@@ -113,15 +113,21 @@ private:
   RdmnetRemoteRdmResponse resp_;
 };
 
-};  // namespace rdmnet
-
 namespace llrp
 {
 class LocalRdmCommand
 {
 private:
   LlrpLocalRdmCommand cmd_;
-}
+};
+
+class RemoteRdmResponse
+{
+private:
+  LlrpRemoteRdmResponse resp_;
+};
 };  // namespace llrp
+
+};  // namespace rdmnet
 
 #endif  // RDMNET_CPP_MESSAGE_H_

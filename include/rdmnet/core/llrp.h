@@ -79,6 +79,20 @@ typedef struct DiscoveredLlrpTarget
   llrp_component_t component_type;
 } DiscoveredLlrpTarget;
 
+/*!
+ * Enumeration representing an action to take after an "LLRP RDM command received" callback
+ * completes.
+ */
+typedef enum
+{
+  /*! Send an RDM ACK to the originating LLRP manager. */
+  kLlrpResponseActionSendAck,
+  /*! Send an RDM NACK with reason to the originating LLRP manager. */
+  kLlrpResponseActionSendNack,
+  /*! Defer the response to be sent later. Be sure to save the command. */
+  kLlrpResponseActionDefer
+} llrp_response_action_t;
+
 #ifdef __cplusplus
 }
 #endif

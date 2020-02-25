@@ -32,39 +32,19 @@
 #include "etcpal/socket.h"
 #include "etcpal/thread.h"
 #include "etcpal/timer.h"
-#include "rdmnet/core.h"
-#include "rdmnet/core/util.h"
 #include "rdmnet/version.h"
 
-extern "C" {
-void llrpcb_target_discovered(llrp_manager_t /*handle*/, const DiscoveredLlrpTarget* target, void* context)
-{
-  LLRPManager* mgr = static_cast<LLRPManager*>(context);
-  if (mgr && target)
-    mgr->TargetDiscovered(*target);
-}
-
-void llrpcb_discovery_finished(llrp_manager_t /*handle*/, void* context)
-{
-  LLRPManager* mgr = static_cast<LLRPManager*>(context);
-  if (mgr)
-    mgr->DiscoveryFinished();
-}
-
-void llrpcb_rdm_resp_received(llrp_manager_t /*handle*/, const LlrpRemoteRdmResponse* resp, void* context)
-{
-  LLRPManager* mgr = static_cast<LLRPManager*>(context);
-  if (mgr && resp)
-    mgr->RdmRespReceived(*resp);
-}
-}
-
-bool LLRPManager::Startup(const etcpal::Uuid& my_cid, const EtcPalLogParams* log_params)
+bool LlrpManagerExample::Startup(const etcpal::Uuid& my_cid, const etcpal::Logger& logger)
 {
   printf("ETC Example LLRP Manager version %s initializing...\n", RDMNET_VERSION_STRING);
 
   cid_ = my_cid;
-  rdmnet_core_init(log_params, nullptr);
+  auto init_result = rdmnet::Init(logger);
+  if (!init_result)
+  {
+    printf("Failed to initialize the RDMnet library: '%s'\n", init_result.ToCString());
+    return false;
+  }
 
   size_t num_interfaces = etcpal_netint_get_num_interfaces();
   if (num_interfaces > 0)
@@ -80,10 +60,9 @@ bool LLRPManager::Startup(const etcpal::Uuid& my_cid, const EtcPalLogParams* log
     const EtcPalNetintInfo* netint_list = etcpal_netint_get_interfaces();
     for (const EtcPalNetintInfo* netint = netint_list; netint < netint_list + num_interfaces; ++netint)
     {
-      config.netint.ip_type = netint->addr.type;
-      config.netint.index = netint->index;
-      llrp_manager_t handle;
-      etcpal::Error res = llrp_manager_create(&config, &handle);
+      rdmnet::llrp::ManagerData manager_data(netint->addr.type, netint->index, 0x6574, my_cid);
+      rdmnet::llrp::Manager manager;
+      auto res = manager.Startup(*this, manager_data);
       if (res)
       {
         managers_.insert(std::make_pair(handle, *netint));
@@ -103,7 +82,7 @@ bool LLRPManager::Startup(const etcpal::Uuid& my_cid, const EtcPalLogParams* log
   return false;
 }
 
-void LLRPManager::Shutdown()
+void LlrpManagerExample::Shutdown()
 {
   for (const auto& netint : managers_)
   {
@@ -112,7 +91,7 @@ void LLRPManager::Shutdown()
   rdmnet_core_deinit();
 }
 
-LLRPManager::ParseResult LLRPManager::ParseCommandLineArgs(const std::vector<std::string>& args)
+LlrpManagerExample::ParseResult LlrpManagerExample::ParseCommandLineArgs(const std::vector<std::string>& args)
 {
   auto iter = args.begin();
   if (iter == args.end())
@@ -135,7 +114,7 @@ LLRPManager::ParseResult LLRPManager::ParseCommandLineArgs(const std::vector<std
   }
 }
 
-void LLRPManager::PrintUsage(const std::string& app_name)
+void LlrpManagerExample::PrintUsage(const std::string& app_name)
 {
   printf("Usage: %s [OPTION]...\n", app_name.c_str());
   printf("With no options, the app will start normally and wait for user input.\n");
@@ -145,7 +124,7 @@ void LLRPManager::PrintUsage(const std::string& app_name)
   printf("  --version  Output version information and exit.\n");
 }
 
-void LLRPManager::PrintVersion()
+void LlrpManagerExample::PrintVersion()
 {
   printf("ETC Example LLRP Manager\n");
   printf("Version %s\n\n", RDMNET_VERSION_STRING);
@@ -156,7 +135,7 @@ void LLRPManager::PrintVersion()
   printf("or implied.\n");
 }
 
-void LLRPManager::PrintCommandList()
+void LlrpManagerExample::PrintCommandList()
 {
   printf("LLRP Manager Commands:\n");
   printf("    ?: Print commands\n");
@@ -179,7 +158,7 @@ void LLRPManager::PrintCommandList()
   printf("    q: Quit\n");
 }
 
-bool LLRPManager::ParseCommand(const std::string& line)
+bool LlrpManagerExample::ParseCommand(const std::string& line)
 {
   bool res = true;
 
@@ -373,7 +352,7 @@ bool LLRPManager::ParseCommand(const std::string& line)
   return res;
 }
 
-void LLRPManager::Discover(llrp_manager_t manager_handle)
+void LlrpManagerExample::Discover(llrp_manager_t manager_handle)
 {
   auto mgr_pair = managers_.find(manager_handle);
   if (mgr_pair == managers_.end())
@@ -403,7 +382,7 @@ void LLRPManager::Discover(llrp_manager_t manager_handle)
   }
 }
 
-void LLRPManager::PrintTargets()
+void LlrpManagerExample::PrintTargets()
 {
   printf("Handle %-13s %-36s %-15s %s\n", "UID", "CID", "Type", "Hardware ID");
   for (const auto& target : targets_)
@@ -415,7 +394,7 @@ void LLRPManager::PrintTargets()
   }
 }
 
-void LLRPManager::PrintNetints()
+void LlrpManagerExample::PrintNetints()
 {
   printf("Handle %-30s %-17s Name\n", "Address", "MAC");
   for (const auto& sock_pair : managers_)
@@ -426,7 +405,7 @@ void LLRPManager::PrintNetints()
   }
 }
 
-void LLRPManager::GetDeviceInfo(int target_handle)
+void LlrpManagerExample::GetDeviceInfo(int target_handle)
 {
   auto mgr_pair = managers_.find(active_manager_);
   if (mgr_pair != managers_.end())
@@ -492,7 +471,7 @@ void LLRPManager::GetDeviceInfo(int target_handle)
   }
 }
 
-void LLRPManager::GetDeviceLabel(int target_handle)
+void LlrpManagerExample::GetDeviceLabel(int target_handle)
 {
   auto mgr_pair = managers_.find(active_manager_);
   if (mgr_pair != managers_.end())
@@ -527,7 +506,7 @@ void LLRPManager::GetDeviceLabel(int target_handle)
   }
 }
 
-void LLRPManager::GetManufacturerLabel(int target_handle)
+void LlrpManagerExample::GetManufacturerLabel(int target_handle)
 {
   auto mgr_pair = managers_.find(active_manager_);
   if (mgr_pair != managers_.end())
@@ -562,7 +541,7 @@ void LLRPManager::GetManufacturerLabel(int target_handle)
   }
 }
 
-void LLRPManager::GetDeviceModelDescription(int target_handle)
+void LlrpManagerExample::GetDeviceModelDescription(int target_handle)
 {
   auto mgr_pair = managers_.find(active_manager_);
   if (mgr_pair != managers_.end())
@@ -597,7 +576,7 @@ void LLRPManager::GetDeviceModelDescription(int target_handle)
   }
 }
 
-void LLRPManager::GetComponentScope(int target_handle, int scope_slot)
+void LlrpManagerExample::GetComponentScope(int target_handle, int scope_slot)
 {
   if (scope_slot < 1 || scope_slot > 65535)
   {
@@ -676,7 +655,7 @@ void LLRPManager::GetComponentScope(int target_handle, int scope_slot)
   }
 }
 
-void LLRPManager::IdentifyDevice(int target_handle)
+void LlrpManagerExample::IdentifyDevice(int target_handle)
 {
   auto mgr_pair = managers_.find(active_manager_);
   if (mgr_pair != managers_.end())
@@ -707,7 +686,7 @@ void LLRPManager::IdentifyDevice(int target_handle)
   }
 }
 
-void LLRPManager::SetDeviceLabel(int target_handle, const std::string& label)
+void LlrpManagerExample::SetDeviceLabel(int target_handle, const std::string& label)
 {
   auto mgr_pair = managers_.find(active_manager_);
   if (mgr_pair != managers_.end())
@@ -739,8 +718,8 @@ void LLRPManager::SetDeviceLabel(int target_handle, const std::string& label)
   }
 }
 
-void LLRPManager::SetComponentScope(int target_handle, int scope_slot, const std::string& scope_utf8,
-                                    const etcpal::SockAddr& static_config)
+void LlrpManagerExample::SetComponentScope(int target_handle, int scope_slot, const std::string& scope_utf8,
+                                           const etcpal::SockAddr& static_config)
 {
   if (scope_slot < 1 || scope_slot > 65535)
   {
@@ -805,7 +784,7 @@ void LLRPManager::SetComponentScope(int target_handle, int scope_slot, const std
   }
 }
 
-void LLRPManager::TargetDiscovered(const DiscoveredLlrpTarget& target)
+void LlrpManagerExample::TargetDiscovered(const DiscoveredLlrpTarget& target)
 {
   if (discovery_active_)
   {
@@ -818,12 +797,12 @@ void LLRPManager::TargetDiscovered(const DiscoveredLlrpTarget& target)
   }
 }
 
-void LLRPManager::DiscoveryFinished()
+void LlrpManagerExample::DiscoveryFinished()
 {
   discovery_active_ = false;
 }
 
-void LLRPManager::RdmRespReceived(const LlrpRemoteRdmResponse& resp)
+void LlrpManagerExample::RdmRespReceived(const LlrpRemoteRdmResponse& resp)
 {
   if (pending_command_response_ && resp.src_cid == pending_resp_cid_ && resp.seq_num == pending_resp_seq_num_)
   {
@@ -832,8 +811,8 @@ void LLRPManager::RdmRespReceived(const LlrpRemoteRdmResponse& resp)
   }
 }
 
-bool LLRPManager::SendRDMAndGetResponse(llrp_manager_t manager, const EtcPalUuid& target_cid,
-                                        const RdmCommand& cmd_data, RdmResponse& resp_data)
+bool LlrpManagerExample::SendRDMAndGetResponse(llrp_manager_t manager, const EtcPalUuid& target_cid,
+                                               const RdmCommand& cmd_data, RdmResponse& resp_data)
 {
   LlrpLocalRdmCommand cmd;
   cmd.rdm = cmd_data;
@@ -890,7 +869,7 @@ bool LLRPManager::SendRDMAndGetResponse(llrp_manager_t manager, const EtcPalUuid
   return false;
 }
 
-const char* LLRPManager::LLRPComponentTypeToString(llrp_component_t type)
+const char* LlrpManagerExample::LLRPComponentTypeToString(llrp_component_t type)
 {
   switch (type)
   {

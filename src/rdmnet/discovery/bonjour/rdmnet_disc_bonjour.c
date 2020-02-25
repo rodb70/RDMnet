@@ -441,15 +441,15 @@ DiscoveredBroker* discovered_broker_lookup_by_ref(DiscoveredBroker* list_head, D
 
 void get_registration_string(const char* srv_type, const char* scope, char* reg_str)
 {
-  RDMNET_MSVC_BEGIN_NO_DEP_WARNINGS()
+  ETCPAL_MSVC_BEGIN_NO_DEP_WARNINGS()
 
   // Bonjour adds in the _sub. for us.
-  RDMNET_MSVC_NO_DEP_WRN strncpy(reg_str, srv_type, REGISTRATION_STRING_PADDED_LENGTH);
+  strncpy(reg_str, srv_type, REGISTRATION_STRING_PADDED_LENGTH);
   strcat(reg_str, ",");
   strcat(reg_str, "_");
   strcat(reg_str, scope);
 
-  RDMNET_MSVC_END_NO_DEP_WARNINGS()
+  ETCPAL_MSVC_END_NO_DEP_WARNINGS()
 }
 
 /* Create a TXT record with the required key/value pairs from E1.33 from the RdmnetBrokerDiscInfo */

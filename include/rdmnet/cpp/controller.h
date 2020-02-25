@@ -232,6 +232,9 @@ inline bool ControllerRdmData::IsValid() const
 class Controller
 {
 public:
+  Controller(const Controller& other) = delete;
+  Controller& operator=(const Controller& other) = delete;
+
   etcpal::Error Startup(ControllerNotifyHandler& notify_handler, const ControllerData& data,
                         const ControllerRdmData& rdm_data);
   etcpal::Error Startup(ControllerNotifyHandler& notify_handler, const ControllerData& data,

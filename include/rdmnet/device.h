@@ -95,8 +95,8 @@ typedef struct RdmnetDeviceCallbacks
    * \param[in] cmd The RDM command data.
    * \param[in] context Context pointer that was given at the creation of the device instance.
    */
-  rdmnet_response_action_t (*llrp_rdm_command_received)(rdmnet_device_t handle, const LlrpRemoteRdmCommand* cmd,
-                                                        RdmnetSyncRdmResponse* response, void* context);
+  llrp_response_action_t (*llrp_rdm_command_received)(rdmnet_device_t handle, const LlrpRemoteRdmCommand* cmd,
+                                                      LlrpSyncRdmResponse* response, void* context);
 
   /*!
    * \brief A set of previously-requested dynamic UID assignments has been received.
