@@ -7,13 +7,16 @@ workflow:
 variables:
   GIT_STRATEGY: clone
   GIT_SUBMODULE_STRATEGY: normal
-  GLOBAL_CMAKE_OPTIONS: -DRDMNET_BUILD_TESTS=ON -DRDMNET_BUILD_CONSOLE_EXAMPLES=ON
+  # COMMONTECH-81: Will revist when ready to move to Qt6
+  #GLOBAL_CMAKE_OPTIONS: -DRDMNET_BUILD_TESTS=ON -DRDMNET_BUILD_CONSOLE_EXAMPLES=ON
+  GLOBAL_CMAKE_OPTIONS: -DRDMNET_BUILD_TESTS=ON
   PROJECT_BOT_USER: project_270_bot
   SIGNTOOL: "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.17763.0\\x86\\signtool.exe"
   
 stages:
   - build
-  - notarize
+  # COMMONTECH-81: Will revist when ready to move to Qt6
+  #- notarize
   - deploy
 
 windows-build:
@@ -23,12 +26,12 @@ windows-build:
   parallel:
     matrix:
       - CMAKE_GENERATOR_OPTIONS: -A Win32
-        QT_DIRECTORY: C:\Qt_os\5.12.11\msvc2017
+        QT_DIRECTORY: C:\Qt\5.15.19\msvc2019
         CMAKE_INSTALL: install_x86
         VCVARSALL_PLATFORM: x86
         ARTIFACT_TYPE: x86
       - CMAKE_GENERATOR_OPTIONS: -A x64
-        QT_DIRECTORY: C:\Qt_os\5.12.11\msvc2017_64
+        QT_DIRECTORY: C:\Qt\5.15.19\msvc2019_64
         CMAKE_INSTALL: install_x64
         VCVARSALL_PLATFORM: amd64
         ARTIFACT_TYPE: x64
@@ -36,64 +39,74 @@ windows-build:
     - python tools\ci\update_artifact_version.py
     - mkdir build
     - cd build
-    - cmake -G "Visual Studio 16 2019" $env:CMAKE_GENERATOR_OPTIONS.Split(" ") "-DQTDIR=$env:QT_DIRECTORY" "-DCMAKE_INSTALL_PREFIX=$env:CMAKE_INSTALL" $env:GLOBAL_CMAKE_OPTIONS.Split(" ") -DRDMNET_BUILD_GUI_EXAMPLES=ON -DRDMNET_INCLUDE_SIGN_TOOLS=ON ..
+    # COMMONTECH-81: Will revist when ready to move to Qt6
+    #- cmake -G "Visual Studio 16 2019" $env:CMAKE_GENERATOR_OPTIONS.Split(" ") "-DQTDIR=$env:QT_DIRECTORY" "-DCMAKE_INSTALL_PREFIX=$env:CMAKE_INSTALL" $env:GLOBAL_CMAKE_OPTIONS.Split(" ") -DRDMNET_BUILD_GUI_EXAMPLES=ON -DRDMNET_INCLUDE_SIGN_TOOLS=ON ..
+    - cmake -G "Visual Studio 16 2019" $env:CMAKE_GENERATOR_OPTIONS.Split(" ") "-DQTDIR=$env:QT_DIRECTORY" "-DCMAKE_INSTALL_PREFIX=$env:CMAKE_INSTALL" $env:GLOBAL_CMAKE_OPTIONS.Split(" ") -DRDMNET_INCLUDE_SIGN_TOOLS=ON ..
     - cmake --build . --config Release -j
     - ctest -C Release --output-on-failure
-    - cmake -P cmake_install.cmake
-    - cd ..
-    - .\tools\ci\windows_build_installer.bat
-    - echo "Signing Installer"
-    - $Env:ETC_SIGN_CREDS = "${NET_CODESIGN_USER}:${NET_CODESIGN_PASS}"
-    - Start-Process -NoNewWindow -Wait -FilePath "build\_deps\etc_sign-src\etc_sign.bat" -ArgumentList "--initcert"
-    - Start-Process -NoNewWindow -Wait -FilePath "build\_deps\etc_sign-src\etc_sign.bat" -ArgumentList "RDMnetSetup_$env:ARTIFACT_TYPE.msi"
+    # COMMONTECH-81: Will revist when ready to move to Qt6
+    #- cmake -P cmake_install.cmake
+    #- cd ..
+    #- .\tools\ci\windows_build_installer.bat
+    #- echo "Signing Installer"
+    #- $Env:ETC_SIGN_CREDS = "${NET_CODESIGN_USER}:${NET_CODESIGN_PASS}"
+    #- Start-Process -NoNewWindow -Wait -FilePath "build\_deps\etc_sign-src\etc_sign.bat" -ArgumentList "--initcert"
+    #- Start-Process -NoNewWindow -Wait -FilePath "build\_deps\etc_sign-src\etc_sign.bat" -ArgumentList "RDMnetSetup_$env:ARTIFACT_TYPE.msi"
   artifacts:
     when: always
     paths:
-      - RDMnetSetup_$ARTIFACT_TYPE.msi
+      # COMMONTECH-81: Will revist when ready to move to Qt6
+      #- RDMnetSetup_$ARTIFACT_TYPE.msi
     reports:
       junit: build/tests/test-results/*.xml
 
 macos-build:
   stage: build
   tags:
-    - ct-macos
-  variables:
-    QT_DIRECTORY: /Users/Shared/Qt/5.9.7/clang_64
+   - ct-mac-m2
+  #variables:
+    # COMMONTECH-81: Will revist when ready to move to Qt6
+    #QT_DIRECTORY: /Users/Shared/Qt/6.8.6/6.8.6/macos/
   script:
     - pip3 config set global.index-url https://artifactory.etcconnect.com/artifactory/api/pypi/ETC-PyPI/simple
     - pip3 config set global.trusted-host artifactory.etcconnect.com
     - pip3 install etcdevtool
     - python3 tools/ci/update_artifact_version.py
-    - mkdir build
+    # COMMONTECH-81: Will revist when ready to move to Qt6
+    #- cmake -DQTDIR=${QT_DIRECTORY} -DCMAKE_INSTALL_PREFIX=install ${GLOBAL_CMAKE_OPTIONS} -DRDMNET_BUILD_GUI_EXAMPLES=ON -DRDMNET_INCLUDE_SIGN_TOOLS=ON ..
+    - cmake -B build -S . -DCMAKE_INSTALL_PREFIX=build/install ${GLOBAL_CMAKE_OPTIONS} -DRDMNET_INCLUDE_SIGN_TOOLS=ON -G Xcode
     - cd build
-    - cmake -DQTDIR=${QT_DIRECTORY} -DCMAKE_INSTALL_PREFIX=install ${GLOBAL_CMAKE_OPTIONS} -DRDMNET_BUILD_GUI_EXAMPLES=ON -DRDMNET_INCLUDE_SIGN_TOOLS=ON ..
-    - cmake --build . --config Release -j
-    - cmake -P cmake_install.cmake
-    - ctest --output-on-failure
-    - cd ..
-    - python3 tools/install/macos/macos_build_package.py
+    - xcodebuild -project RDMnet.xcodeproj -target ALL_BUILD -configuration Release ARCHS="x86_64 arm64" ONLY_ACTIVE_ARCH=NO
+    # COMMONTECH-81: Will revist when ready to move to Qt6
+    #- cmake -P cmake_install.cmake
+    - ctest --output-on-failure -C Release
+    # COMMONTECH-81: Will revist when ready to move to Qt6
+    #- cd ..
+    #- python3 tools/install/macos/macos_build_package.py
   artifacts:
     when: always
     paths:
-      - RDMnet.pkg
-      - build/_deps/etc_mac_notarize-src/
+    # COMMONTECH-81: Will revist when ready to move to Qt6
+      #- RDMnet.pkg
+      #- build/_deps/etc_mac_notarize-src/
     reports:
       junit: build/tests/test-results/*.xml
 
-macos-notarize:
- stage: notarize
- tags:
-   - ct-mac-m2
- dependencies:
-   - macos-build
- script:
-   - echo 'Notarizing Installer'
-   - security unlock-keychain -p build /Users/gitlab-runner/Library/Keychains/login.keychain-db
-   - python3 build/_deps/etc_mac_notarize-src/notarize.py --PACKAGE_FILEPATH ./RDMnet.pkg --KEYCHAIN notarytool-password
- artifacts:
-   when: always
-   paths:
-     - RDMnet.pkg
+# COMMONTECH-81: Will revist when ready to move to Qt6
+#macos-notarize:
+ #stage: notarize
+ #tags:
+   #- ct-mac-m2
+ #dependencies:
+   #- macos-build
+ #script:
+   #- echo 'Notarizing Installer'
+   #- security unlock-keychain -p build /Users/gitlab-runner/Library/Keychains/login.keychain-db
+   #- python3 build/_deps/etc_mac_notarize-src/notarize.py --PACKAGE_FILEPATH ./RDMnet.pkg --KEYCHAIN notarytool-password
+ #artifacts:
+   #when: always
+   #paths:
+     #- RDMnet.pkg
 
 linux-build:
   stage: build
@@ -170,19 +183,20 @@ deploy-docs:
 # Deploy versioned build
 include:
   - project: 'etc/common-tech/tools/gitlab-ci-util'
-    ref: v2.0.1
+    ref: v2.2.3
     file: '/ci-yml/deploy-versioned-build.yml'
 
-deploy-artifacts:
-  stage: deploy
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "web" && $NEW_BUILD_VERSION =~ /^\d+\.\d+\.\d+\.\d+$/ && $CI_COMMIT_REF_NAME == "main"'
-  tags:
-    - etc-linux-docker
-  dependencies:
-    - windows-build
-    - macos-notarize
-  image: etc-docker.artifactory.etcconnect.com/python:latest
-  script:
-    - pip install requests PyGithub
-    - python3 tools/ci/deploy_to_github_release.py ${NEW_BUILD_VERSION}
+# COMMONTECH-81: Will revist when ready to move to Qt6
+#deploy-artifacts:
+  #stage: deploy
+  #rules:
+    #- if: '$CI_PIPELINE_SOURCE == "web" && $NEW_BUILD_VERSION =~ /^\d+\.\d+\.\d+\.\d+$/ && $CI_COMMIT_REF_NAME == "main"'
+  #tags:
+    #- etc-linux-docker
+  #dependencies:
+    #- windows-build
+    #- macos-notarize
+  #image: etc-docker.artifactory.etcconnect.com/python:latest
+  #script:
+    #- pip install requests PyGithub
+    #- python3 tools/ci/deploy_to_github_release.py ${NEW_BUILD_VERSION}

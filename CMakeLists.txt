@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12 CACHE STRING "Minimum macOS version targeted by RDMnet on macOS")
+if (APPLE)
+  set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Build architectures for macOS" FORCE)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "Minimum macOS version targeted by RDMnet on macOS")
+endif()
+
 project(RDMnet)
 
 set(RDMNET_ROOT ${CMAKE_CURRENT_LIST_DIR})

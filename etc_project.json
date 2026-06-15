@@ -3,17 +3,17 @@
     {
       "name": "EtcPal",
       "gitlabPath": "etc/common-tech/general/etcpal",
-      "version": "0.5.0.12"
+      "version": "1.0.0.30"
     },
     {
       "name": "RDM",
       "gitlabPath": "etc/common-tech/net/githubrdm",
-      "version": "0.2.0"
+      "version": "0.3.0.4"
     },
     {
       "name": "googletest",
       "gitlabPath": "mirrors/thirdparty/google/googletest",
-      "gitTag": "6b74da4757a549563d7c37c8fae3e704662a043b",
+      "gitTag": "d72f9c8aea6817cdf1ca0ac10887f328de7f3da2",
       "devOnly": true
     },
     {
